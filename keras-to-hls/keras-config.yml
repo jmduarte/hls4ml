@@ -5,7 +5,7 @@ OutputPredictions: example-keras-model-files/KERAS_3layer_predictions.dat
 TruthLabels: example-keras-model-files/KERAS_3layer_truth_labels.dat
 OutputDir: my-hls-test
 ProjectName: myproject
-XilinxPart: xcku115-flvb2104-2-i
+XilinxPart: xcvu9p-fsgd2104-2-i
 
 ReuseFactor: 1
 DefaultPrecision: ap_fixed<16,6> 
