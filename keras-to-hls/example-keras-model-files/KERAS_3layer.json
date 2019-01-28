@@ -31,13 +31,8 @@
                     "activity_regularizer": null,
                     "bias_constraint": null,
                     "bias_initializer": {
-                        "class_name": "VarianceScaling",
-                        "config": {
-                            "distribution": "uniform",
-                            "mode": "fan_in",
-                            "scale": 1.0,
-                            "seed": null
-                        }
+                        "class_name": "Zeros",
+                        "config": {}
                     },
                     "bias_regularizer": null,
                     "kernel_constraint": null,
@@ -53,7 +48,7 @@
                     "kernel_regularizer": {
                         "class_name": "L1L2",
                         "config": {
-                            "l1": 9.999999747378752e-05,
+                            "l1": 0.0,
                             "l2": 0.0
                         }
                     },
@@ -81,13 +76,8 @@
                     "activity_regularizer": null,
                     "bias_constraint": null,
                     "bias_initializer": {
-                        "class_name": "VarianceScaling",
-                        "config": {
-                            "distribution": "uniform",
-                            "mode": "fan_in",
-                            "scale": 1.0,
-                            "seed": null
-                        }
+                        "class_name": "Zeros",
+                        "config": {}
                     },
                     "bias_regularizer": null,
                     "kernel_constraint": null,
@@ -103,7 +93,7 @@
                     "kernel_regularizer": {
                         "class_name": "L1L2",
                         "config": {
-                            "l1": 9.999999747378752e-05,
+                            "l1": 0.0,
                             "l2": 0.0
                         }
                     },
@@ -131,13 +121,8 @@
                     "activity_regularizer": null,
                     "bias_constraint": null,
                     "bias_initializer": {
-                        "class_name": "VarianceScaling",
-                        "config": {
-                            "distribution": "uniform",
-                            "mode": "fan_in",
-                            "scale": 1.0,
-                            "seed": null
-                        }
+                        "class_name": "Zeros",
+                        "config": {}
                     },
                     "bias_regularizer": null,
                     "kernel_constraint": null,
@@ -153,7 +138,7 @@
                     "kernel_regularizer": {
                         "class_name": "L1L2",
                         "config": {
-                            "l1": 9.999999747378752e-05,
+                            "l1": 0.0,
                             "l2": 0.0
                         }
                     },
@@ -181,13 +166,8 @@
                     "activity_regularizer": null,
                     "bias_constraint": null,
                     "bias_initializer": {
-                        "class_name": "VarianceScaling",
-                        "config": {
-                            "distribution": "uniform",
-                            "mode": "fan_in",
-                            "scale": 1.0,
-                            "seed": null
-                        }
+                        "class_name": "Zeros",
+                        "config": {}
                     },
                     "bias_regularizer": null,
                     "kernel_constraint": null,
@@ -203,7 +183,7 @@
                     "kernel_regularizer": {
                         "class_name": "L1L2",
                         "config": {
-                            "l1": 9.999999747378752e-05,
+                            "l1": 0.0,
                             "l2": 0.0
                         }
                     },
@@ -234,5 +214,5 @@
             ]
         ]
     },
-    "keras_version": "2.0.0"
+    "keras_version": "2.2.4"
 }
