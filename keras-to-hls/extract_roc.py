@@ -14,10 +14,12 @@ def parse_config(config_file) :
     config = open(config_file, 'r')
     return yaml.load(config)
 
-def extract_roc(yamlConfig):
+def extract_roc(yamlConfig,opts):
     print("Extracting ROC")
 
+    fpga_output_df = 0
     output_filename = "./{}/{}_prj/solution1/csim/build/tb_output_data.dat".format(yamlConfig['OutputDir'], yamlConfig['ProjectName'])
+    
     truth_filename = yamlConfig['TruthLabels']
     predict_filename = yamlConfig['OutputPredictions']
 
@@ -29,11 +31,16 @@ def extract_roc(yamlConfig):
     truth_df = np.loadtxt(truth_filename)
     predict_df = np.loadtxt(predict_filename)
     output_df = np.loadtxt(output_filename)
+    if opts.useFPGA != "":
+     fpga_output_df = np.loadtxt(opts.useFPGA)
+     fpga_output_df = fpga_output_df[:truth_df.shape[0]]
     
     if len(truth_df.shape) == 1:
         truth_df = truth_df.reshape((truth_df.shape[0], 1))
         predict_df = predict_df.reshape((predict_df.shape[0], 1))
         output_df = output_df.reshape((output_df.shape[0], 1))
+        if opts.useFPGA!="": fpga_output_df = fpga_output_df.reshape((fpga_output_df.shape[0], 1))
+            
     Noutputs = truth_df.shape[1]
 
     predict_df = predict_df[:output_df.shape[0],:]
@@ -51,8 +58,14 @@ def extract_roc(yamlConfig):
         dfpr, dtpr, dthreshold = roc_curve(truth_df[:,i],output_df[:,i])
         dauc = auc(dfpr, dtpr)
         plt.plot(dtpr,dfpr,label='HLS auc = %.1f%%'%(dauc * 100))
+        plt.plot([], [], ' ', label="Ratio HLS/Keras = {:.2f}".format(dauc / eauc))
         
-        plt.plot([], [], ' ', label="Ratio = {:.2f}".format(dauc / eauc))
+        ## Expected AUC from FPGA run
+        if opts.useFPGA!="":
+         dfpr, dtpr, dthreshold = roc_curve(truth_df[:,i],fpga_output_df[:,i])
+         fauc = auc(dfpr, dtpr)
+         plt.plot(dtpr,dfpr,label='FPGA auc = %.1f%%'%(fauc * 100))
+         plt.plot([], [], ' ', label="Ratio FPGA/HLS = {:.2f}".format(fauc / dauc))
 
         plt.semilogy()
         plt.legend(loc='upper left')
@@ -64,12 +77,12 @@ def extract_roc(yamlConfig):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument("-c", action='store', dest='config',
-                        help="Configuration file.")
+    parser.add_argument("-c", action='store', dest='config', help="Configuration file.")
+    parser.add_argument("-f", action='store', dest='useFPGA', default="", help="FPGA output data")
     args = parser.parse_args()
     if not args.config: parser.error('A configuration file needs to be specified.')
     
     configDir  = os.path.abspath(os.path.dirname(args.config))
     yamlConfig = parse_config(args.config)
     
-    extract_roc(yamlConfig)
+    extract_roc(yamlConfig,args)
