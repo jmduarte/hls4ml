@@ -68,6 +68,7 @@ def extract_roc(yamlConfig,opts):
          plt.plot([], [], ' ', label="Ratio FPGA/HLS = {:.2f}".format(fauc / dauc))
 
         plt.semilogy()
+        plt.ylim(0.001,1)
         plt.legend(loc='upper left')
         roc_filename = "{}_ROC{}.pdf".format(yamlConfig['OutputDir'],str(i))
         plt.savefig(roc_filename)
