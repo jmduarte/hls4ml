@@ -56,7 +56,7 @@ void normalize(
     data_T cache;
    
     // Use a function_instantiate in case it helps to explicitly optimize unchanging weights/biases
-    #pragma HLS function_instantiate variable=scale,beta,mean
+    //#pragma HLS function_instantiate variable=scale,beta,mean
 
     if (CONFIG_T::io_type == io_parallel){
         // For parallel inputs:
