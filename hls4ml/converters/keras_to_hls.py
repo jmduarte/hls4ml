@@ -108,10 +108,11 @@ def keras_to_hls(yamlConfig):
     activation_layers = ['Activation', 'LeakyReLU', 'ThresholdedReLU', 'ELU', 'PReLU']
     merge_layers = ['Add', 'Subtract', 'Multiply', 'Average', 'Maximum', 'Minimum', 'Concatenate']
     qkeras_layers = ['QDense', 'QActivation', 'QConv1D', 'QConv2D']
+    graph_layers = ['GarNet']
     #Define layers to skip for conversion to HLS
     skip_layers = ['Dropout', 'Flatten']
     #All supported layers
-    supported_layers = core_layers + conv_layers + pooling_layers + norm_layers + activation_layers + merge_layers + qkeras_layers + skip_layers
+    supported_layers = core_layers + conv_layers + pooling_layers + norm_layers + activation_layers + merge_layers + qkeras_layers + graph_layers + skip_layers
 
     #Map inputs of skipped and split (activation) layers
     inputs_map = {}
@@ -146,13 +147,17 @@ def keras_to_hls(yamlConfig):
     for keras_layer in layer_config:
         if keras_layer["class_name"] not in supported_layers:
             raise Exception('ERROR: Unsupported layer type: {}'.format(keras_layer["class_name"]))
-        if 'batch_input_shape' in keras_layer['config']:
-            current_shape = keras_layer['config']['batch_input_shape'] # [None, 100, 7]
+
+    output_shapes = {}
+    output_shape = None
 
     print('Topology:')
     for keras_layer in layer_config:
-        if keras_layer["class_name"] == 'Flatten':
-            current_shape = [current_shape[0], np.prod(current_shape[1:])]
+        if 'batch_input_shape' in keras_layer['config']:
+            input_shapes = [keras_layer['config']['batch_input_shape']] # [None, 100, 7]
+        else:
+            input_shapes = [output_shapes[inbound_node[0][0]] for inbound_node in keras_layer['inbound_nodes']]
+        
         if keras_layer["class_name"] in skip_layers:
             if 'inbound_nodes' in keras_layer:
                 name = keras_layer['config']['name']
@@ -160,6 +165,12 @@ def keras_to_hls(yamlConfig):
                 parent_input = keras_layer['inbound_nodes'][0][0][0]
                 #Skipped layers can follow each other (e.g., Dropout -> Flatten)
                 inputs_map[name] = inputs_map.get(parent_input, parent_input)
+
+            if keras_layer["class_name"] == 'Flatten':
+                output_shapes[keras_layer['name']] = [input_shapes[0][0], np.prod(input_shapes[0][1:])]
+            else:
+                output_shapes[keras_layer['name']] = input_shapes[0]
+                
             continue
 
         if keras_layer["class_name"] in supported_layers:
@@ -188,10 +199,14 @@ def keras_to_hls(yamlConfig):
         # Default one layer call
         if layer['class_name'] == 'InputLayer':
             layer['input_shape'] = keras_layer['config']['batch_input_shape'][1:]
-        if keras_layer["class_name"] == 'Reshape':
+            if keras_layer['config']['dtype'] == 'int32':
+                layer['type_name'] = 'integer_input_t'
+                layer['precision'] = 'ap_int<32>'
+            output_shape = keras_layer['config']['batch_input_shape'] # [None, 100, 7]
+        elif keras_layer["class_name"] == 'Reshape':
             layer['target_shape'] = keras_layer['config']['target_shape']
-            current_shape[1:] = keras_layer['config']['target_shape']
-        if 'Dense' in layer['class_name']:
+            output_shape = input_shapes[0][:1] + keras_layer['config']['target_shape']
+        elif 'Dense' in layer['class_name']:
             weights_shape = get_weights_shape(yamlConfig['KerasH5'], layer['name'])
             layer['n_in'] = weights_shape[0]
             layer['n_out'] = weights_shape[1]
@@ -203,18 +218,18 @@ def keras_to_hls(yamlConfig):
                 get_qkeras_quantization(layer, keras_layer)
             else:
                 layer['quantize'] = 0
-            current_shape = [current_shape[0], layer['n_out']]
+            output_shape = [input_shapes[0][0], layer['n_out']]
         elif layer['class_name']=='Conv1D':
             # weights_shape = (filter_width, n_channels, n_filters)
             weights_shape = get_weights_shape(yamlConfig['KerasH5'], layer['name'])
-            layer['n_in']=current_shape[1]
+            layer['n_in']=input_shapes[0][1]
             layer['filt_width']=weights_shape[0] # or keras_layer['config']['kernel_size']
             layer['n_chan']=weights_shape[1]
             layer['n_filt']=weights_shape[2] # or keras_layer['config']['filters']
             layer['stride']=keras_layer['config']['strides'][0]
             layer['padding']=keras_layer['config']['padding']
             if layer['padding']=='same':
-                in_width = current_shape[1]
+                in_width = input_shapes[0][1]
                 layer['n_out'] = int(math.ceil(float(in_width) / float(layer['stride'])))
                 if (in_width % layer['stride'] == 0):
                     pad_along_width = max(layer['filt_width'] - layer['stride'], 0)
@@ -223,7 +238,7 @@ def keras_to_hls(yamlConfig):
                 layer['pad_left']  = pad_along_width // 2
                 layer['pad_right']  = pad_along_width - layer['pad_left']
             elif layer['padding']=='valid':
-                in_width = current_shape[1]
+                in_width = input_shapes[0][1]
                 layer['n_out'] = int(math.ceil(float(in_width - layer['filt_width'] + 1) / float(layer['stride'])))
                 layer['pad_left'] = 0
                 layer['pad_right'] = 0
@@ -234,8 +249,8 @@ def keras_to_hls(yamlConfig):
             layer['data_format'] = keras_layer['config'].get('data_format', 'channels_last')
             # weights_shape = (filter_height, filter_width, n_channels, n_filters)
             weights_shape = get_weights_shape(yamlConfig['KerasH5'], layer['name'])
-            layer['in_height']=current_shape[1]
-            layer['in_width']=current_shape[2]
+            layer['in_height']=input_shapes[0][1]
+            layer['in_width']=input_shapes[0][2]
             if layer['data_format'] == 'channels_first':
                 layer['in_height']=current_shape[2]
                 layer['in_width']=current_shape[3]
@@ -248,8 +263,8 @@ def keras_to_hls(yamlConfig):
             layer['padding']=keras_layer['config']['padding']
             if layer['padding']=='same':
                 #Height
-                in_height = current_shape[1]
-                if layer['data_format'] == 'channels_first': in_height = current_shape[2]
+                in_height = input_shapes[0][1]
+                if layer['data_format'] == 'channels_first': in_height = input_shapes[0][2]
                 layer['out_height'] = int(math.ceil(float(in_height) / float(layer['stride_height'])))
                 if (in_height % layer['stride_height'] == 0):
                     pad_along_height = max(layer['filt_height'] - layer['stride_height'], 0)
@@ -258,8 +273,8 @@ def keras_to_hls(yamlConfig):
                 layer['pad_top']  = pad_along_height // 2
                 layer['pad_bottom']  = pad_along_height - layer['pad_top']
                 #Width
-                in_width = current_shape[2]
-                if layer['data_format'] == 'channels_first': in_width = current_shape[3]
+                in_width = input_shapes[0][2]
+                if layer['data_format'] == 'channels_first': in_width = input_shapes[0][3]
                 layer['out_width'] = int(math.ceil(float(in_width) / float(layer['stride_width'])))
                 if (in_width % layer['stride_width'] == 0):
                     pad_along_width = max(layer['filt_width'] - layer['stride_width'], 0)
@@ -268,8 +283,8 @@ def keras_to_hls(yamlConfig):
                 layer['pad_left']  = pad_along_width // 2
                 layer['pad_right']  = pad_along_width - layer['pad_left']
             elif layer['padding']=='valid':
-                in_height = current_shape[1]
-                in_width = current_shape[2]
+                in_height = input_shapes[0][1]
+                in_width = input_shapes[0][2]
                 if layer['data_format'] == 'channels_first':
                     in_height = current_shape[2]
                     in_width = current_shape[3]
@@ -284,25 +299,25 @@ def keras_to_hls(yamlConfig):
             else: current_shape=[current_shape[0], layer['out_height'], layer['out_width'], layer['n_filt']]
         elif layer['class_name']=='BatchNormalization':
             in_size = 1
-            for dim in current_shape[1:]:
+            for dim in input_shapes[0][1:]:
                 in_size *= dim
             layer['n_in'] = in_size
             layer['n_out'] = layer['n_in']
-            if len(current_shape) == 2:
+            if len(input_shapes[0]) == 2:
                 layer['n_filt'] = -1
-            elif len(current_shape) == 3:
-                layer['n_filt']=current_shape[2]
-            elif len(current_shape) == 4:
-                layer['n_filt']=current_shape[3]
+            elif len(input_shapes[0]) == 3:
+                layer['n_filt']=input_shapes[0][2]
+            elif len(input_shapes[0]) == 4:
+                layer['n_filt']=input_shapes[0][3]
         elif 'Pooling' in layer['class_name']:
             if int(layer['class_name'][-2]) == 1:
-                layer['n_in']=current_shape[1]
-                layer['n_filt']=current_shape[2]
+                layer['n_in']=input_shapes[0][1]
+                layer['n_filt']=input_shapes[0][2]
                 layer['pool_size']=keras_layer['config']['pool_size'][0]
                 layer['stride']=keras_layer['config']['strides'][0]
                 layer['padding']=keras_layer['config']['padding']
                 if layer['padding']=='same':
-                    in_width = current_shape[1]
+                    in_width = input_shapes[0][1]
                     layer['n_out'] = int(math.ceil(float(in_width) / float(layer['stride'])))
                     if (in_width % layer['stride'] == 0):
                         pad_along_width = max(layer['pool_size'] - layer['stride'], 0)
@@ -311,20 +326,20 @@ def keras_to_hls(yamlConfig):
                     layer['pad_left']  = pad_along_width // 2
                     layer['pad_right']  = pad_along_width - layer['pad_left']
                 elif layer['padding']=='valid':
-                    in_width = current_shape[1]
+                    in_width = input_shapes[0][1]
                     layer['n_out'] = int(math.ceil(float(in_width - layer['pool_size'] + 1) / float(layer['stride'])))
                     layer['pad_left'] = 0
                     layer['pad_right'] = 0
-                current_shape=[current_shape[0], layer['n_out'], layer['n_filt']]
+                output_shape=[input_shapes[0][0], layer['n_out'], layer['n_filt']]
             elif int(layer['class_name'][-2]) == 2:
                 layer['data_format'] = keras_layer['config'].get('data_format', 'channels_last')
-                layer['in_height']=current_shape[1]
-                layer['in_width']=current_shape[2]
-                layer['n_filt']=current_shape[3]
+                layer['in_height']=input_shapes[0][1]
+                layer['in_width']=input_shapes[0][2]
+                layer['n_filt']=input_shapes[0][3]
                 if layer['data_format'] == 'channels_first':
-                 layer['in_height']=current_shape[2]
-                 layer['in_width']=current_shape[3]
-                 layer['n_filt']=current_shape[1]
+                 layer['in_height']=input_shapes[0][2]
+                 layer['in_width']=input_shapes[0][3]
+                 layer['n_filt']=input_shapes[0][1]
                 layer['stride_height']=keras_layer['config']['strides'][0]
                 layer['stride_width']=keras_layer['config']['strides'][1]
                 layer['pool_height']=keras_layer['config']['pool_size'][0]
@@ -332,8 +347,8 @@ def keras_to_hls(yamlConfig):
                 layer['padding']=keras_layer['config']['padding']
                 if layer['padding']=='same':
                     #Height
-                    in_height = current_shape[1]
-                    if layer['data_format'] == 'channels_first': in_height = current_shape[2]
+                    in_height = input_shapes[0][1]
+                    if layer['data_format'] == 'channels_first': in_height = input_shapes[0][2]
                     layer['out_height'] = int(math.ceil(float(in_height) / float(layer['stride_height'])))
                     if (in_height % layer['stride_height'] == 0):
                         pad_along_height = max(layer['pool_height'] - layer['stride_height'], 0)
@@ -342,8 +357,8 @@ def keras_to_hls(yamlConfig):
                     layer['pad_top']  = pad_along_height // 2
                     layer['pad_bottom']  = pad_along_height - layer['pad_top']
                     #Width
-                    in_width = current_shape[2]
-                    if layer['data_format'] == 'channels_first': in_height = current_shape[3]
+                    in_width = input_shapes[0][2]
+                    if layer['data_format'] == 'channels_first': in_height = input_shapes[0][3]
                     layer['out_width'] = int(math.ceil(float(in_width) / float(layer['stride_width'])))
                     if (in_width % layer['stride_width'] == 0):
                         pad_along_width = max(layer['pool_width'] - layer['stride_width'], 0)
@@ -352,19 +367,19 @@ def keras_to_hls(yamlConfig):
                     layer['pad_left']  = pad_along_width // 2
                     layer['pad_right']  = pad_along_width - layer['pad_left']
                 elif layer['padding']=='valid':
-                    in_height = current_shape[1]
-                    in_width = current_shape[2]
+                    in_height = input_shapes[0][1]
+                    in_width = input_shapes[0][2]
                     if layer['data_format'] == 'channels_first':
-                     in_height = current_shape[2]
-                     in_width = current_shape[3]
+                     in_height = input_shapes[0][2]
+                     in_width = input_shapes[0][3]
                     layer['out_width'] = int(math.ceil(float(in_width - layer['pool_width'] + 1) / float(layer['stride_width'])))
                     layer['out_height'] = int(math.ceil(float(in_height - layer['pool_height'] + 1) / float(layer['stride_height'])))
                     layer['pad_top'] = 0
                     layer['pad_bottom'] = 0
                     layer['pad_left'] = 0
                     layer['pad_right'] = 0
-                if layer['data_format'] == 'channels_last': current_shape=[current_shape[0], layer['out_height'], layer['out_width'], layer['n_filt']]
-                elif layer['data_format'] == 'channels_first': current_shape=[current_shape[0], layer['n_filt'], layer['out_height'], layer['out_width']]
+                if layer['data_format'] == 'channels_last': output_shape=[input_shapes[0][0], layer['out_height'], layer['out_width'], layer['n_filt']]
+                elif layer['data_format'] == 'channels_first': output_shape=[input_shapes[0][0], layer['n_filt'], layer['out_height'], layer['out_width']]
 
         elif layer['class_name']=='LeakyReLU':
             layer['activation'] = layer['class_name']
@@ -388,7 +403,7 @@ def keras_to_hls(yamlConfig):
         elif layer['class_name'] in merge_layers:
             layer['op'] = layer['class_name'].lower()
             if layer['class_name'] == 'Concatenate':
-                rank = len(current_shape[1:])
+                rank = len(input_shapes[0][1:])
                 if rank > 3:
                     raise Exception('ERROR: Concatenation of tensors with rank > 3 is not yet supported.')
                 layer['op'] = layer['class_name'].lower() + '{}d'.format(rank)
@@ -398,7 +413,25 @@ def keras_to_hls(yamlConfig):
             if len(layer['inputs']) > 2:
                 raise Exception('ERROR: Merging more than two tensors is not yet supported.')
 
-        print('Layer name: {}, layer type: {}, current shape: {}'.format(layer['name'], layer['class_name'], current_shape))
+        elif layer['class_name'] == 'GarNet':
+            layer['n_vertices'] = input_shapes[0][1]
+            layer['n_in_features'] = input_shapes[0][2]
+            if keras_layer['config']['deduce_nvert']:
+                raise NotImplementedError('Cannot use GarNet with deduce_nvert=True')
+
+            layer['n_aggregators'] = keras_layer['config']['n_aggregators']
+            layer['n_filters'] = keras_layer['config']['n_filters'] # number of output features
+            layer['n_propagate'] = keras_layer['config']['n_propagate'] # number of latent features
+            layer['collapse'] = keras_layer['config']['collapse']
+
+            layer['vertex_unroll_factor'] = 4
+
+            if layer['collapse'] in ['mean', 'sum', 'max']:
+                output_shape = [input_shapes[0][0], layer['n_filters']]
+            else:
+                output_shape = input_shapes[0][:2] + [layer['n_filters']]
+
+        print('Layer name: {}, layer type: {}, current shape: {}'.format(layer['name'], layer['class_name'], input_shapes))
         layer_list.append( layer )
         if 'activation' in layer and layer['class_name'] not in activation_layers + qkeras_layers:
             act_layer = {}
@@ -414,6 +447,9 @@ def keras_to_hls(yamlConfig):
                 output_layers = [act_layer['name'] if name == layer['name'] else name for name in output_layers]
             layer_list.append(act_layer)
 
+        assert(output_shape is not None)
+        
+        output_shapes[keras_layer['name']] = output_shape
 
     #################
     ## Generate HLS
