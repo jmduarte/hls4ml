@@ -127,13 +127,13 @@ def parse_data_format(input_shape, data_format='channels_last'):
     if input_shape[0] is None:
         # Ignore batch size
         input_shape = input_shape[1:]
-    
+
     if data_format.lower() == 'channels_last':
         if len(input_shape) == 2: # 1D, (n_in, n_filt)
             return (input_shape[0], input_shape[1])
         elif len(input_shape) == 3: # 2D, (in_height, in_width, n_filt)
             return (input_shape[0], input_shape[1], input_shape[2])
-        
+
     elif data_format.lower() == 'channels_first':
         if len(input_shape) == 2: # 1D, (n_filt, n_in)
             return (input_shape[1], input_shape[0])
@@ -181,7 +181,7 @@ def compute_padding_2d(pad_type, in_height, in_width, stride_height, stride_widt
     elif pad_type.lower() == 'valid':
         out_height = int(math.ceil(float(in_height - filt_height + 1) / float(stride_height)))
         out_width = int(math.ceil(float(in_width - filt_width + 1) / float(stride_width)))
-        
+
         pad_top = 0
         pad_bottom = 0
         pad_left = 0
@@ -191,7 +191,7 @@ def compute_padding_2d(pad_type, in_height, in_width, stride_height, stride_widt
 
     return (out_height, out_width, pad_top, pad_bottom, pad_left, pad_right)
 
-def keras_to_hls(config):
+def keras_to_hls(config, verbose=False):
 
     ######################
     ##  Do translation
@@ -240,7 +240,7 @@ def keras_to_hls(config):
 
     layer_config = None
     if model_arch['class_name'] == 'Sequential':
-        print('Interpreting Sequential')
+        if verbose: print('Interpreting Sequential')
         layer_config = model_arch['config']
         if 'layers' in layer_config: # Newer Keras versions have 'layers' in 'config' key
             layer_config = layer_config['layers']
@@ -251,9 +251,9 @@ def keras_to_hls(config):
             input_layer['class_name'] = 'InputLayer'
             input_layer['input_shape'] = layer_config[0]['config']['batch_input_shape'][1:]
             layer_list.append(input_layer)
-            print('Input shape:', input_layer['input_shape'])
+            if verbose: print('Input shape:', input_layer['input_shape'])
     elif model_arch['class_name'] in ['Model', 'Functional']: # TF >= 2.3 calls it 'Funcational' API
-        print('Interpreting Model')
+        if verbose: print('Interpreting Model')
         layer_config = model_arch['config']['layers']
         input_layers = [ inp[0] for inp in model_arch['config']['input_layers'] ]
         output_layers = [ out[0] for out in model_arch['config']['output_layers'] ]
@@ -266,7 +266,7 @@ def keras_to_hls(config):
     output_shapes = {}
     output_shape = None
 
-    print('Topology:')
+    if verbose: print('Topology:')
     for keras_layer in layer_config:
         if 'batch_input_shape' in keras_layer['config']:
             if 'inbound_nodes' in keras_layer and len(keras_layer['inbound_nodes']) > 0:
@@ -277,7 +277,7 @@ def keras_to_hls(config):
             if 'inbound_nodes' in keras_layer:
                 input_shapes = [output_shapes[inbound_node[0][0]] for inbound_node in keras_layer['inbound_nodes']]
             else:
-                # Sequential model, so output_shape from the previous layer is still valid 
+                # Sequential model, so output_shape from the previous layer is still valid
                 input_shapes = [output_shape]
 
         keras_class = keras_layer['class_name']
@@ -308,7 +308,7 @@ def keras_to_hls(config):
 
         layer, output_shape = layer_handlers[keras_class](keras_layer, input_names, input_shapes, reader, config)
 
-        print('Layer name: {}, layer type: {}, current shape: {}'.format(layer['name'], layer['class_name'], input_shapes))
+        if verbose: print('Layer name: {}, layer type: {}, current shape: {}'.format(layer['name'], layer['class_name'], input_shapes))
         layer_list.append( layer )
         if 'activation' in layer and layer['class_name'] not in ['Activation', 'LeakyReLU', 'ThresholdedReLU', 'ELU', 'PReLU', 'Softmax']:# + qkeras_layers:
             act_layer = {}
@@ -327,13 +327,13 @@ def keras_to_hls(config):
             layer_list.append(act_layer)
 
         assert(output_shape is not None)
-        
+
         output_shapes[layer['name']] = output_shape
 
     #################
     ## Generate HLS
     #################
 
-    print('Creating HLS model')
+    if verbose: print('Creating HLS model')
     hls_model = HLSModel(config, reader, layer_list, input_layers, output_layers)
     return hls_model
