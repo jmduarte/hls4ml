@@ -40,7 +40,7 @@ except ImportError:
     __tensorflow_enabled__ = False
 
 
-def convert_from_yaml_config(yamlConfig):
+def convert_from_yaml_config(yamlConfig, verbose=False):
     model = None
     if 'OnnxModel' in yamlConfig:
         if __onnx_enabled__:
@@ -58,7 +58,7 @@ def convert_from_yaml_config(yamlConfig):
         else:
             raise Exception("TensorFlow not found. Please install TensorFlow.")
     else:
-        model = keras_to_hls(yamlConfig)
+        model = keras_to_hls(yamlConfig, verbose)
 
     return model
 
