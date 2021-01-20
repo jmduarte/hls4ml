@@ -7,9 +7,9 @@ from collections import OrderedDict
 
 def create_vivado_config(output_dir='my-hls-test', project_name='myproject',
     fpga_part='xcku115-flvb2104-2-i', clock_period=5, io_type='io_parallel'):
-    
+
     config = {}
-    
+
     config['OutputDir'] = output_dir
     config['ProjectName'] = project_name
     config['XilinxPart'] = fpga_part
@@ -30,7 +30,7 @@ def _get_precision_from_quantizer(quantizer):
             quantizer['class_name'] = quantizer_obj.__class__.__name__
             quantizer['config'] = quantizer_obj.get_config()
         # Some activations are just functions
-        else: 
+        else:
             quantizer['class_name'] = quantizer_obj.__name__
 
     supported_quantizers = ['quantized_bits', 'quantized_relu', 'quantized_tanh', 'quantized_po2', 'quantized_relu_po2']
@@ -38,11 +38,11 @@ def _get_precision_from_quantizer(quantizer):
         bits = int(quantizer['config']['bits']) + 1
         # if integer isn't specified, it should be the same as bits
         integer = int(quantizer['config'].get('integer', bits-1)) + 1
-        
+
     elif quantizer['class_name'] in ['binary', 'stochastic_binary', 'binary_tanh']:
         bits = 2
         integer = 2
-    
+
     elif quantizer['class_name'] in ['ternary', 'stochastic_ternary', 'ternary_tanh']:
         bits = 2
         integer = 2
@@ -55,7 +55,7 @@ def _get_precision_from_quantizer(quantizer):
     else:
         return 'ap_int<{}>'.format(bits)
 
-def config_from_keras_model(model, granularity='model', default_precision='ap_fixed<16,6>', default_reuse_factor=1):
+def config_from_keras_model(model, granularity='model', default_precision='ap_fixed<16,6>', default_reuse_factor=1, verbose=False):
 
     if granularity.lower() not in ['model', 'type', 'name']:
         raise Exception('Invalid configuration granularity specified, expected "model", "type" or "name" got "{}"'.format(granularity))
@@ -84,7 +84,7 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
 
     keras_layer_config = None
     if model_arch['class_name'] == 'Sequential':
-        print('Interpreting Sequential')
+        if verbose: print('Interpreting Sequential')
         keras_layer_config = model_arch['config']
         if 'layers' in keras_layer_config: # Newer Keras versions have 'layers' in 'config' key
             keras_layer_config = keras_layer_config['layers']
@@ -95,10 +95,10 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
             input_layer['class_name'] = 'Input'
             layer_list.append(input_layer)
     elif model_arch['class_name'] in ['Model', 'Functional']:
-        print('Interpreting Model')
+        if verbose: print('Interpreting Model')
         keras_layer_config = model_arch['config']['layers']
 
-    print('Topology:')
+    if verbose: print('Topology:')
     for keras_layer in keras_layer_config:
         if keras_layer['class_name'] not in supported_layers:
             raise Exception('ERROR: Unsupported layer type: {}'.format(keras_layer['class_name']))
@@ -129,13 +129,13 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
                     precision = _get_precision_from_quantizer(qclass)
                     layer['precision']['result'] = precision
 
-        print('Layer name: {}, layer type: {}'.format(layer['name'], layer['class_name']))
+        if verbose: print('Layer name: {}, layer type: {}'.format(layer['name'], layer['class_name']))
         layer_list.append( layer )
         if 'activation' in layer['config'] and layer['class_name'] not in activation_layers + qkeras_layers:
             act_layer = {}
             act_layer['name'] = layer['name'] + '_' + layer['config']['activation']
             act_layer['class_name'] = 'Activation'
-            print('  -> Activation ({}), layer name: {}'.format(layer['config']['activation'], layer['name']))
+            if verbose: print('  -> Activation ({}), layer name: {}'.format(layer['config']['activation'], layer['name']))
             layer_list.append(act_layer)
 
 
@@ -161,13 +161,13 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
                layer_config['inv_table_t'] = 'ap_fixed<18,8,AP_RND,AP_SAT>'
             else:
                 layer_config['table_t'] = 'ap_fixed<18,8>'
-        
+
         elif layer['class_name'] in norm_layers:
             layer_config['Precision'] = {}
             layer_config['Precision']['scale'] = default_precision
             layer_config['Precision']['bias'] = default_precision
             layer_config['ReuseFactor'] = default_reuse_factor
-        
+
         elif layer['class_name'] in qkeras_layers:
             if 'precision' in layer:
                 layer_config['Precision'] = {}
@@ -184,7 +184,7 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
 
         else:
             layer_config['Precision'] = default_precision
-        
+
         return layer_config
 
     config = {}
@@ -197,7 +197,7 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
     #model_config['Trace'] = False
 
     config['Model'] = model_config
-    
+
     if granularity.lower() == 'type':
         type_config = {}
         for layer in layer_list:
@@ -205,7 +205,7 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
                 continue
             layer_config = make_layer_config(layer)
             type_config[layer['class_name']] = layer_config
-        
+
         config['LayerType'] = type_config
 
     elif granularity.lower() == 'name':
@@ -213,7 +213,7 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
         for layer in layer_list:
             layer_config = make_layer_config(layer)
             name_config[layer['name']] = layer_config
-        
+
         config['LayerName'] = name_config
 
     return config
