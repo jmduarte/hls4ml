@@ -146,7 +146,7 @@ class HLSConfig(object):
 
     def _parse_hls_config(self):
         hls_config = self.config['HLSConfig']
-        
+
         self.optimizers = hls_config.get('Optimizers')
         if 'SkipOptimizers' in hls_config:
             if self.optimizers is not None:
@@ -157,9 +157,9 @@ class HLSConfig(object):
                 try:
                     selected_optimizers.remove(opt)
                 except ValueError:
-                    pass                
+                    pass
             self.optimizers = selected_optimizers
-        
+
         model_cfg = hls_config.get('Model')
         if model_cfg is not None:
             precision_cfg = model_cfg.get('Precision')
@@ -373,19 +373,19 @@ class HLSModel(object):
     def get_layer_output_variable(self, output_name):
         return self.output_vars[output_name]
 
-    def write(self):
+    def write(self, verbose=False):
         def make_stamp():
             from string import hexdigits
             from random import choice
             length = 8
             return ''.join(choice(hexdigits) for m in range(length))
-        
+
         self.config.config['Stamp'] = make_stamp()
 
-        self.config.writer.write_hls(self)
+        self.config.writer.write_hls(self, verbose=False)
 
-    def compile(self):
-        self.write()
+    def compile(self, verbose=False):
+        self.write(verbose=verbose)
 
         curr_dir = os.getcwd()
         os.chdir(self.config.get_output_dir())
