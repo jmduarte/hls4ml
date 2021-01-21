@@ -239,7 +239,7 @@ def weights_keras(model, fmt='longform', plot='boxplot'):
         data = pandas.DataFrame(data)
     return data
 
-def activations_keras(model, X, fmt='longform', plot='boxplot'):
+def activations_keras(model, X, fmt='longform', plot='boxplot', verbose=False):
     # test layer by layer on data
     if fmt == 'longform':
         # return long form pandas dataframe for
@@ -252,7 +252,7 @@ def activations_keras(model, X, fmt='longform', plot='boxplot'):
 
     partial_model = keras.models.Sequential()
     for layer in model.layers:
-        print("   {}".format(layer.name))
+        if verbose: print("   {}".format(layer.name))
         partial_model.add(layer)
         partial_model.compile(optimizer='adam', loss='mse')
         if not isinstance(layer, keras.layers.InputLayer):
@@ -330,7 +330,7 @@ def activations_torch(model, X, fmt='longform', plot='boxplot'):
     return data
 
 
-def numerical(model=None, hls_model=None, X=None, plot='boxplot'):
+def numerical(model=None, hls_model=None, X=None, plot='boxplot', verbose=False):
     """
     Perform numerical profiling of a model
 
@@ -356,7 +356,7 @@ def numerical(model=None, hls_model=None, X=None, plot='boxplot'):
     """
     wp, ap = None, None
 
-    print("Profiling weights")
+    if verbose: print("Profiling weights")
     data = None
     if hls_model is not None and isinstance(hls_model, HLSModel):
         data = weights_hlsmodel(hls_model, fmt='summary', plot=plot)
@@ -379,11 +379,11 @@ def numerical(model=None, hls_model=None, X=None, plot='boxplot'):
     plt.title("Distribution of (non-zero) weights")
     plt.tight_layout()
 
-    print("Profiling activations")
+    if verbose: print("Profiling activations")
     data = None
     if X is not None:
         if __tf_profiling_enabled__ and isinstance(model, keras.Model):
-            data = activations_keras(model, X, fmt='summary', plot=plot)
+            data = activations_keras(model, X, fmt='summary', plot=plot, verbose)
         elif __torch_profiling_enabled__ and \
                 isinstance(model, torch.nn.Sequential):
             data = activations_torch(model, X, fmt='summary', plot=plot)
