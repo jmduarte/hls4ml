@@ -471,8 +471,8 @@ class HLSModel(object):
         else:
             return output
 
-    def trace(self, x):
-        print('Recompiling {} with tracing'.format(self.config.get_project_name()))
+    def trace(self, x, verbose=False):
+        if verbose: print('Recompiling {} with tracing'.format(self.config.get_project_name()))
         self.config.trace_output = True
         self.compile()
 
