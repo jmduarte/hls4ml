@@ -383,7 +383,7 @@ def numerical(model=None, hls_model=None, X=None, plot='boxplot', verbose=False)
     data = None
     if X is not None:
         if __tf_profiling_enabled__ and isinstance(model, keras.Model):
-            data = activations_keras(model, X, fmt='summary', plot=plot, verbose)
+            data = activations_keras(model, X, fmt='summary', plot=plot, verbose=verbose)
         elif __torch_profiling_enabled__ and \
                 isinstance(model, torch.nn.Sequential):
             data = activations_torch(model, X, fmt='summary', plot=plot)
