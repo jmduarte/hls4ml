@@ -1,15 +1,17 @@
 # Keras models from examples directory that will be used for testing
 #
 # Synthax:
-#    MODEL_NAME[:WEIGHTS_FILE] [x:XILINXPART] [c:CLOCK_PERIOD] [io:s] [r:REUSE_FACTOR] [t:AP_TYPE]
+#    MODEL_NAME[:WEIGHTS_FILE] [x:XILINXPART] [c:CLOCK_PERIOD] [io:s] [r:REUSE_FACTOR] [t:AP_TYPE] [s:STRATEGY] [y:CONFIG_FILE]
 # where
 #    MODEL_NAME - Name of the file containing json model (without ".json")
 #    WEIGHTS_FILE - Name of the HDF5 file containing model weights (without ".h5")
 #    x:XILINXPART - Xilinx part number to use
 #    c:CLOCK_PERIOD - Clock period
-#    io:s - User serial I/O, otherwise use parallel I/O
+#    io:s - User streaming I/O, otherwise use parallel I/O
 #    r:REUSE_FACTOR - Reuse factor
+#    s:STRATEGY - Latency-optimized or Resource-optimized strategy
 #    t:AP_TYPE - Default precision
+#    y:CONFIG_FILE - YAML config file to copy HLSConfig from
 #
 # Lines starting with "#" are ignored.
 #
@@ -18,17 +20,28 @@ KERAS_1layer
 KERAS_3layer
 #KERAS_3layer:KERAS_3layer_70pruned_retrained_weights
 #KERAS_conv1d
-KERAS_conv1d_small
-KERAS_conv2d_model
-KERAS_dense_big
+#KERAS_conv1d_small
+#KERAS_conv2d_model
+#KERAS_dense_16x100x100x100x100x100x5
 KERAS_3layer_batch_norm
 KERAS_3layer_binary_smaller
 KERAS_3layer_ternary_small
+ 
+garnet_1layer x:xcku115-flvb2104-2-i y:garnet_1layer_config 
+
+# Resource strategy
+KERAS_3layer r:2 s:Resource
+qkeras_mnist_dense r:112 s:Resource
 
 #Fails synthesis due to a problem with loop unrolling
 #jetTagger_Conv2D_Small:jetTagger_Conv2D_Small
 
-KERAS_1layer io:s
+# Streaming IO
+#KERAS_1layer io:s
 KERAS_3layer io:s
+KERAS_conv1d_small io:s
+KERAS_conv2d_model io:s
+jetTagger_Conv2D_Small io:s
+jetTagger_Conv2D_Small_NoBatchNorm io:s
 
 #KERAS_1layer x:xcku115-flvf1924-2-i

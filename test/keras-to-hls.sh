@@ -1,11 +1,13 @@
 #!/bin/bash
 
 pycmd=python
-xilinxpart="xc7vx690tffg1927-2"
+xilinxpart="xcvu9p-flgb2104-2-e"
 clock=5
 io=io_parallel
 rf=1
-type="ap_fixed<18,8>"
+strategy="Latency"
+type="ap_fixed<16,6>"
+yml=""
 basedir=vivado_prj
 
 sanitizer="[^A-Za-z0-9._]"
@@ -19,40 +21,43 @@ function print_usage {
    echo "Multiple models can be specified."
    echo ""
    echo "Options are:"
-   echo "   -p 2|3"
-   echo "      Python version to use (2 or 3). If not specified uses default"
-   echo "      'python' interpreter."
    echo "   -x DEVICE"
-   echo "      Xilinx device part number. Defaults to 'xc7vx690tffg1927-2'."
+   echo "      Xilinx device part number. Defaults to 'xcvu9p-flgb2104-2-e'."
    echo "   -c CLOCK"
    echo "      Clock period to use. Defaults to 5."
    echo "   -s"
-   echo "      Use serial I/O. If not specified uses parallel I/O."
+   echo "      Use streaming I/O. If not specified uses parallel I/O."
    echo "   -r FACTOR"
    echo "      Reuse factor. Defaults to 1."
+   echo "   -g STRATEGY"
+   echo "      Strategy. 'Latency' or 'Resource'."
    echo "   -t TYPE"
-   echo "      Default precision. Defaults to 'ap_fixed<18,8>'."
+   echo "      Default precision. Defaults to 'ap_fixed<16,6>'."
    echo "   -d DIR"
    echo "      Output directory."
+   echo "   -y FILE"
+   echo "      YAML config file to take HLS config from. If specified, -r, -g and -t are ignored."
    echo "   -h"
    echo "      Prints this help message."
 }
 
-while getopts ":p:x:c:sr:t:d:h" opt; do
+while getopts ":x:c:sr:g:t:d:y:h" opt; do
    case "$opt" in
-   p) pycmd=${pycmd}$OPTARG
-      ;;
    x) xilinxpart=$OPTARG
       ;;
    c) clock=$OPTARG
       ;;
-   s) io=io_serial
+   s) io=io_stream
       ;;
    r) rf=$OPTARG
+      ;;
+   g) strategy=$OPTARG
       ;;
    t) type=$OPTARG
       ;;
    d) basedir=$OPTARG
+      ;;
+   y) yml=$OPTARG
       ;;
    h)
       print_usage
@@ -87,21 +92,36 @@ do
 
    echo "Creating config file for model '${model}'"
    base=`echo "${h5}" | sed -e 's/\(_weights\)*$//g'`
-   file="${basedir}/${base}-${pycmd}.yml"
+   file="${basedir}/${base}.yml"
+   prjdir="${basedir}/${base}-${xilinxpart//${sanitizer}/_}-c${clock}-${io}-rf${rf}-${type//${sanitizer}/_}-${strategy}"
 
-   # This scheme assumes base output directory is one level deep 
-   echo "KerasJson: ../../keras-to-hls/example-keras-model-files/${name}.json" > ${file}
-   echo "KerasH5:   ../../keras-to-hls/example-keras-model-files/${h5}.h5" >> ${file}
-   echo "OutputDir: ${base}-${pycmd}-${xilinxpart//${sanitizer}/_}-c${clock}-${io}-rf${rf}-${type//${sanitizer}/_}" >> ${file}
+   hlscfg=""
+   if [ ! -z "${yml}" ]; then
+      hlscfg=`sed -ne '/HLSConfig/,$p' ../example-models/config-files/${yml}`
+   fi
+
+   echo "KerasJson: ../example-models/keras/${name}.json" > ${file}
+   echo "KerasH5:   ../example-models/keras/${h5}.h5" >> ${file}
+   echo "OutputDir: ${prjdir}" >> ${file}
    echo "ProjectName: myproject" >> ${file}
    echo "XilinxPart: ${xilinxpart}" >> ${file}
    echo "ClockPeriod: ${clock}" >> ${file}
    echo "" >> ${file}
    echo "IOType: ${io}" >> ${file}
-   echo "ReuseFactor: ${rf}" >> ${file}
-   echo "DefaultPrecision: ${type} " >> ${file}
+   
+   if [ -z "${hlscfg}" ]
+   then
+      echo "HLSConfig:" >> ${file}
+      echo "  Model:" >> ${file}
+      echo "    ReuseFactor: ${rf}" >> ${file}
+      echo "    Precision: ${type} " >> ${file}
+      echo "    Strategy: ${strategy} " >> ${file}
+   else
+      echo "${hlscfg}" >> ${file}
+   fi
 
-   ${pycmd} ../keras-to-hls/keras-to-hls.py -c ${file} || exit 1
+   ${pycmd} ../scripts/hls4ml convert -c ${file} || exit 1
    rm ${file}
+   rm -rf "${prjdir}"
    echo ""
 done
