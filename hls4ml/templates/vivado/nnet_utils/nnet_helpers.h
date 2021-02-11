@@ -299,8 +299,12 @@ void copy_data(std::vector<src_T> src, hls::stream<dst_T> &dst) {
     }
 }
 
+#include <limits>
+typedef std::numeric_limits< double > dbl;
+typedef std::numeric_limits< float > flt;
 template<class res_T, size_t SIZE>
 void print_result(res_T result[SIZE], std::ostream &out, bool keep = false) {
+    out.precision(flt::max_digits10);
     for(int i = 0; i < SIZE; i++) {
         out << result[i] << " ";
     }
