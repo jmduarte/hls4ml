@@ -4,8 +4,7 @@ from shutil import copyfile
 
 class PynqBackend(VivadoBackend):
     def __init__(self):
-        super(PynqBackend, self).__init__()
-        self.name = 'Pynq'
+        super(PynqBackend, self).__init__(name='Pynq')
 
     def make_bitfile(model):
         curr_dir = os.getcwd()

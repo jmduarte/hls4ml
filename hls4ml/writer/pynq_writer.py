@@ -78,6 +78,8 @@ class PynqWriter(VivadoWriter):
 
         f = open(os.path.join(filedir,'../templates/pynq/myproject_axi.cpp'),'r')
         fout = open('{}/firmware/{}_axi.cpp'.format(model.config.get_output_dir(), model.config.get_project_name()),'w')
+        
+        io_type = model.config.get_config_value("IOType")
 
         for line in f.readlines():
             if 'void myproject(' in line:
@@ -85,9 +87,14 @@ class PynqWriter(VivadoWriter):
             elif '//hls-fpga-machine-learning insert include' in line:
                 newline = '#include "{}_axi.h"\n'.format(model.config.get_project_name())
             elif '//hls-fpga-machine-learning insert local vars' in line:
-                newline = ''
-                newline += indent + inp.type.name + ' in_local[N_IN];\n'
-                newline += indent + out.type.name + ' out_local[N_OUT];\n'
+                if io_type == 'io_parallel':
+                    newline = ''
+                    newline += indent + inp.type.name + ' in_local[N_IN];\n'
+                    newline += indent + out.type.name + ' out_local[N_OUT];\n'
+                elif io_type == 'io_stream':
+                    newline = ''
+                    newline += indent + 'hls::stream<' + inp.type.name + '> in_local("input_1");\n'
+                    newline += indent + 'hls::stream<' + out.type.name + '> out_local("output_1");\n'
             elif '//hls-fpga-machine-learning insert call' in line:
                 newline = indent + '{}(in_local, out_local, in_size, out_size);\n'.format(model.config.get_project_name())         
             elif '//hls-fpga-machine-learning insert interface' in line:
@@ -101,6 +108,46 @@ class PynqWriter(VivadoWriter):
                     newline += indent + '#pragma HLS INTERFACE s_axilite port=return bundle=CTRL_BUS\n'
                     newline += indent + '#pragma HLS INTERFACE m_axi depth=in_size port=in offset=slave bundle=IN_BUS\n'
                     newline += indent + '#pragma HLS INTERFACE m_axi depth=out_size port=out offset=slave bundle=OUT_BUS\n'
+            elif '//hls-fpga-machine-learning insert enqueue' in line:
+                io_type = model.config.get_config_value("IOType")
+                if io_type == 'io_parallel':
+                    newline = ''
+                    newline += indent + 'for(unsigned i = 0; i < N_IN; i++){\n'
+                    newline += indent + indent + '#pragma HLS UNROLL\n'
+                    newline += indent + indent + 'in_local[i] = in[i]; // Read input with cast\n'
+                    newline += indent + '}\n'
+                elif io_type=='io_stream':
+                    newline = ''
+                    newline += indent + 'for (unsigned i = 0; i < N_IN / {input_t}::size; ++i) {{\n'
+                    newline += indent + indent + '#pragma HLS PIPELINE\n'
+                    newline += indent + indent + '{input_t} ctype;\n'
+                    newline += indent + indent + '#pragma HLS DATA_PACK variable=ctype\n'
+                    newline += indent + indent + 'for(unsigned j = 0; j < {input_t}::size; j++) {{\n'
+                    newline += indent + indent + indent + '#pragma HLS UNROLL\n'
+                    newline += indent + indent + indent + 'ctype[j] = typename {input_t}::value_type(in[i * {input_t}::size + j]);\n'
+                    newline += indent + indent + '}}\n'
+                    newline += indent + indent + 'in_local.write(ctype);\n'
+                    newline += indent + '}}\n'
+                    newline = newline.format(input_t=inp.type.name)
+            elif '//hls-fpga-machine-learning insert dequeue' in line:
+                io_type = model.config.get_config_value("IOType")
+                if io_type == 'io_parallel':
+                    newline = ''
+                    newline += indent + 'for(unsigned i = 0; i < N_OUT; i++){\n'
+                    newline += indent + indent + '#pragma HLS UNROLL\n'
+                    newline += indent + indent + 'out[i] = out_local[i]; // Write output with cast\n'
+                    newline += indent + '}\n'
+                elif io_type == 'io_stream':
+                    newline = ''
+                    newline += indent + 'for(unsigned i = 0; i < N_OUT / {result_t}::size; ++i) {{\n'
+                    newline += indent + indent + '#pragma HLS PIPELINE\n'
+                    newline += indent + indent + '{result_t} ctype = out_local.read();\n'
+                    newline += indent + indent + 'for(unsigned j = 0; j < {result_t}::size; j++) {{\n'
+                    newline += indent + indent + indent + '#pragma HLS UNROLL\n'
+                    newline += indent + indent + indent + 'out[i * {result_t}::size + j] = output_axi_t(ctype[j]);\n'
+                    newline += indent + indent + '}}\n'
+                    newline += indent + '}}\n'
+                    newline = newline.format(result_t=out.type.name)
             else:
                 newline = line
             fout.write(newline)
@@ -140,11 +187,11 @@ class PynqWriter(VivadoWriter):
         f.write('variable myproject\n')
         f.write('set myproject "{}"\n'.format(model.config.get_project_name()))
         
-    def write_hls(self, model, verbose=False):
+    def write_hls(self, model):
         '''
         Write the HLS project. Calls the VivadoBackend writer, and extra steps for Pynq/AXI interface
         '''
-        super(PynqWriter, self).write_hls(model, verbose)
+        super(PynqWriter, self).write_hls(model)
         self.write_axi_wrapper(model)
         self.modify_build_script(model)
         self.write_board_script(model)

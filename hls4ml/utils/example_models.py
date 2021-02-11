@@ -130,7 +130,7 @@ def fetch_example_model(model_name):
     
 
     download_link_model = download_link + model_type + '/' + model_name
-    
+
     #Download the example model
     print("Downloading example model files ...")
     urlretrieve(download_link_model, model_name)
