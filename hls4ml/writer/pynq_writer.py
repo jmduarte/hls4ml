@@ -187,11 +187,11 @@ class PynqWriter(VivadoWriter):
         f.write('variable myproject\n')
         f.write('set myproject "{}"\n'.format(model.config.get_project_name()))
         
-    def write_hls(self, model):
+    def write_hls(self, model, verbose=False):
         '''
         Write the HLS project. Calls the VivadoBackend writer, and extra steps for Pynq/AXI interface
         '''
-        super(PynqWriter, self).write_hls(model)
+        super(PynqWriter, self).write_hls(model, verbose)
         self.write_axi_wrapper(model)
         self.modify_build_script(model)
         self.write_board_script(model)
