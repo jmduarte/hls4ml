@@ -116,9 +116,9 @@ class PynqWriter(VivadoWriter):
                     newline += indent + indent + '#pragma HLS UNROLL\n'
                     newline += indent + indent + 'in_local[i] = in[i]; // Read input with cast\n'
                     newline += indent + '}\n'
-                elif io_type=='io_stream':
+                elif io_type == 'io_stream':
                     newline = ''
-                    newline += indent + 'for (unsigned i = 0; i < N_IN / {input_t}::size; ++i) {{\n'
+                    newline += indent + 'for(unsigned i = 0; i < N_IN / {input_t}::size; ++i) {{\n'
                     newline += indent + indent + '#pragma HLS PIPELINE\n'
                     newline += indent + indent + '{input_t} ctype;\n'
                     newline += indent + indent + '#pragma HLS DATA_PACK variable=ctype\n'
