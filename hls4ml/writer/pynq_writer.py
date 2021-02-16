@@ -117,9 +117,12 @@ class PynqWriter(VivadoWriter):
                 io_type = model.config.get_config_value("IOType")
                 if io_type == 'io_parallel':
                     newline = ''
-                    newline += indent + 'for(unsigned i = 0; i < N_IN; i++){\n'
-                    newline += indent + indent + '#pragma HLS UNROLL\n'
-                    newline += indent + indent + 'in_local[i] = in[i]; // Read input with cast\n'
+                    newline += indent + 'LOAD: {\n'
+                    newline += indent + indent + '#pragma HLS INLINE off\n'
+                    newline += indent + indent + 'for(unsigned i = 0; i < N_IN; i++){\n'
+                    newline += indent + indent + indent + '#pragma HLS UNROLL\n'
+                    newline += indent + indent + indent + 'in_local[i] = in[i]; // Read input with cast\n'
+                    newline += indent + indent + '}\n'
                     newline += indent + '}\n'
                 elif io_type == 'io_stream':
                     newline = ''
@@ -138,9 +141,12 @@ class PynqWriter(VivadoWriter):
                 io_type = model.config.get_config_value("IOType")
                 if io_type == 'io_parallel':
                     newline = ''
-                    newline += indent + 'for(unsigned i = 0; i < N_OUT; i++){\n'
-                    newline += indent + indent + '#pragma HLS UNROLL\n'
-                    newline += indent + indent + 'out[i] = out_local[i]; // Write output with cast\n'
+                    newline += indent + 'STORE: {\n'
+                    newline += indent + indent + '#pragma HLS INLINE off\n'
+                    newline += indent + indent + 'for(unsigned i = 0; i < N_OUT; i++){\n'
+                    newline += indent + indent + indent + '#pragma HLS UNROLL\n'
+                    newline += indent + indent + indent + 'out[i] = out_local[i]; // Write output with cast\n'
+                    newline += indent + indent + '}\n'
                     newline += indent + '}\n'
                 elif io_type == 'io_stream':
                     newline = ''
