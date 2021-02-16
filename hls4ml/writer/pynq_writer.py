@@ -97,6 +97,11 @@ class PynqWriter(VivadoWriter):
                     newline += indent + 'hls::stream<' + out.type.name + '> out_local("output_1");\n'
             elif '//hls-fpga-machine-learning insert call' in line:
                 newline = indent + '{}(in_local, out_local, in_size, out_size);\n'.format(model.config.get_project_name())         
+            elif '//hls-fpga-machine-learning insert directives' in line:
+                if model.config.interface == 'm_axi':
+                    if model.config.implementation == 'serial':
+                        newline = ''
+                        newline += indent + '#pragma HLS DATAFLOW'
             elif '//hls-fpga-machine-learning insert interface' in line:
                 if model.config.interface == 's_axilite':
                     newline = ''

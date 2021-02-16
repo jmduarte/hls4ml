@@ -9,6 +9,8 @@ void myproject(
 
     //hls-fpga-machine-learning insert interface
 
+    //hls-fpga-machine-learning insert directives
+
     unsigned short in_size = 0;
     unsigned short out_size = 0;
 
