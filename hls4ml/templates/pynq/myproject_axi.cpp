@@ -1,8 +1,12 @@
 //hls-fpga-machine-learning insert include
 
 void myproject(
-    input_axi_t in[N_IN],
-    output_axi_t out[N_OUT]
+    input_axi_t in[
+//hls-fpga-machine-learning insert in-size
+    ],
+    output_axi_t out[
+//hls-fpga-machine-learning insert out-size
+    ]
         ){
     const unsigned short axi_in_size = N_IN;
     const unsigned short axi_out_size = N_OUT;

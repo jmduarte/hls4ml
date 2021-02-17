@@ -57,7 +57,7 @@ class PynqWriter(VivadoWriter):
             elif '//hls-fpga-machine-learning insert definitions' in line:
                 if model.config.interface == 'm_axi':
                     newline = ''
-                    newline += '#define CEILING_DIV(x,y) (((x) + (y) - 1) / (y))'
+                    newline += '#define CEILING_DIV(x,y) (((x) + (y) - 1) / (y))\n'
                     newline += 'static const unsigned N_IN = {};\n'.format(inp.size())
                     newline += 'static const unsigned N_OUT = {};\n'.format(out.size())
                     newline += 'static const unsigned AXI_WIDTH = {};\n'.format(model.config.axi_width)
@@ -79,6 +79,20 @@ class PynqWriter(VivadoWriter):
                     #newline += 'typedef {} output_axi_t;\n'.format(out_axi_t)
                     #newline += 'typedef {} input_t;\n'.format(inp.type.precision)
                     #newline += 'typedef {} output_t;\n'.format(out.type.precision)
+            elif '//hls-fpga-machine-learning insert in-size' in line:
+                if model.config.interface == 'm_axi':
+                    newline = ''
+                    newline += 'AXI_IN;\n'
+                else:
+                    newline = ''
+                    newline += 'N_IN;\n'
+            elif '//hls-fpga-machine-learning insert out-size' in line:
+                if model.config.interface == 'm_axi':
+                    newline = ''
+                    newline += 'AXI_OUT;\n'
+                else:
+                    newline = ''
+                    newline += 'N_OUT;\n'
             else:
                 newline = line
             fout.write(newline)
@@ -99,6 +113,20 @@ class PynqWriter(VivadoWriter):
                 newline = 'void {}_axi(\n'.format(model.config.get_project_name())
             elif '//hls-fpga-machine-learning insert include' in line:
                 newline = '#include "{}_axi.h"\n'.format(model.config.get_project_name())
+            elif '//hls-fpga-machine-learning insert in-size' in line:
+                if model.config.interface == 'm_axi':
+                    newline = ''
+                    newline += 'AXI_IN;\n'
+                else:
+                    newline = ''
+                    newline += 'N_IN;\n'
+            elif '//hls-fpga-machine-learning insert out-size' in line:
+                if model.config.interface == 'm_axi':
+                    newline = ''
+                    newline += 'AXI_OUT;\n'
+                else:
+                    newline = ''
+                    newline += 'N_OUT;\n'
             elif '//hls-fpga-machine-learning insert local vars' in line:
                 if model.config.interface == 'm_axi':
                     newline = ''
