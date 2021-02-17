@@ -92,7 +92,7 @@ class PynqWriter(VivadoWriter):
                     newline += indent + indent + 'AXI_OUT\n'
                 else:
                     newline = ''
-                    newline += indent + indent + 'N_OUT;\n'
+                    newline += indent + indent + 'N_OUT\n'
             else:
                 newline = line
             fout.write(newline)
@@ -116,17 +116,17 @@ class PynqWriter(VivadoWriter):
             elif '//hls-fpga-machine-learning insert in-size' in line:
                 if model.config.interface == 'm_axi':
                     newline = ''
-                    newline += indent + indent + 'AXI_IN;\n'
+                    newline += indent + indent + 'AXI_IN\n'
                 else:
                     newline = ''
-                    newline += indent + indent + 'N_IN;\n'
+                    newline += indent + indent + 'N_IN\n'
             elif '//hls-fpga-machine-learning insert out-size' in line:
                 if model.config.interface == 'm_axi':
                     newline = ''
-                    newline += indent + indent + 'AXI_OUT;\n'
+                    newline += indent + indent + 'AXI_OUT\n'
                 else:
                     newline = ''
-                    newline += indent + indent + 'N_OUT;\n'
+                    newline += indent + indent + 'N_OUT\n'
             elif '//hls-fpga-machine-learning insert local vars' in line:
                 if model.config.interface == 'm_axi':
                     newline = ''
