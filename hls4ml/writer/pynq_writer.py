@@ -55,17 +55,30 @@ class PynqWriter(VivadoWriter):
             elif 'void myproject(' in line:
                 newline = 'void {}_axi(\n'.format(model.config.get_project_name())
             elif '//hls-fpga-machine-learning insert definitions' in line:
-                newline = ''
-                newline += 'static const unsigned N_IN = {};\n'.format(inp.size())
-                newline += 'static const unsigned N_OUT = {};\n'.format(out.size())
-                newline += 'typedef {} input_axi_t;\n'.format(inp_axi_t)
-                newline += 'typedef {} output_axi_t;\n'.format(out_axi_t)
-                #newline += 'typedef {} input_t;\n'.format(inp.type.precision)
-                #newline += 'typedef {} output_t ;\n'.format(out.type.precision)
-                #newline += 'typedef {} input_axi_t;\n'.format(inp_axi_t)
-                #newline += 'typedef {} output_axi_t;\n'.format(out_axi_t)
-                #newline += 'typedef {} input_t;\n'.format(inp.type.precision)
-                #newline += 'typedef {} output_t;\n'.format(out.type.precision)
+                if model.config.interface == 'm_axi':
+                    newline = ''
+                    newline += '#define CEILING_DIV(x,y) (((x) + (y) - 1) / (y))'
+                    newline += 'static const unsigned N_IN = {};\n'.format(inp.size())
+                    newline += 'static const unsigned N_OUT = {};\n'.format(out.size())
+                    newline += 'static const unsigned AXI_WIDTH = {};\n'.format(model.config.axi_width)
+                    newline += 'static const unsigned WCOUNT_IN = (AXI_WIDTH / input_t::width );\n'
+                    newline += 'static const unsigned WCOUNT_OUT = (AXI_WIDTH / result_t::width );\n'
+                    newline += 'static const unsigned AXI_IN = CEILING_DIV((input_t::width * N_IN), AXI_WIDTH);\n'
+                    newline += 'static const unsigned AXI_OUT = CEILING_DIV((result_t::width * N_OUT), AXI_WIDTH);\n'
+                    newline += 'typedef ap_uint<AXI_WIDTH> input_axi_t;\n'
+                    newline += 'typedef ap_uint<AXI_WIDTH> output_axi_t;\n'
+                else:
+                    newline = ''
+                    newline += 'static const unsigned N_IN = {};\n'.format(inp.size())
+                    newline += 'static const unsigned N_OUT = {};\n'.format(out.size())
+                    newline += 'typedef {} input_axi_t;\n'.format(inp_axi_t)
+                    newline += 'typedef {} output_axi_t;\n'.format(out_axi_t)
+                    #newline += 'typedef {} input_t;\n'.format(inp.type.precision)
+                    #newline += 'typedef {} output_t ;\n'.format(out.type.precision)
+                    #newline += 'typedef {} input_axi_t;\n'.format(inp_axi_t)
+                    #newline += 'typedef {} output_axi_t;\n'.format(out_axi_t)
+                    #newline += 'typedef {} input_t;\n'.format(inp.type.precision)
+                    #newline += 'typedef {} output_t;\n'.format(out.type.precision)
             else:
                 newline = line
             fout.write(newline)
@@ -87,14 +100,19 @@ class PynqWriter(VivadoWriter):
             elif '//hls-fpga-machine-learning insert include' in line:
                 newline = '#include "{}_axi.h"\n'.format(model.config.get_project_name())
             elif '//hls-fpga-machine-learning insert local vars' in line:
-                if io_type == 'io_parallel':
+                if model.config.interface == 'm_axi':
                     newline = ''
-                    newline += indent + inp.type.name + ' in_local[N_IN];\n'
-                    newline += indent + out.type.name + ' out_local[N_OUT];\n'
-                elif io_type == 'io_stream':
-                    newline = ''
-                    newline += indent + 'hls::stream<' + inp.type.name + '> in_local("input_1");\n'
-                    newline += indent + 'hls::stream<' + out.type.name + '> out_local("output_1");\n'
+                    newline += indent + inp.type.name + ' in_local[WCOUNT_IN * AXI_IN];\n'
+                    newline += indent + out.type.name + ' out_local[WCOUNT_OUT * AXI_OUT];\n'
+                else:
+                    if io_type == 'io_parallel':
+                        newline = ''
+                        newline += indent + inp.type.name + ' in_local[N_IN];\n'
+                        newline += indent + out.type.name + ' out_local[N_OUT];\n'
+                    elif io_type == 'io_stream':
+                        newline = ''
+                        newline += indent + 'hls::stream<' + inp.type.name + '> in_local("input_1");\n'
+                        newline += indent + 'hls::stream<' + out.type.name + '> out_local("output_1");\n'
             elif '//hls-fpga-machine-learning insert call' in line:
                 newline = indent + '{}(in_local, out_local, in_size, out_size);\n'.format(model.config.get_project_name())         
             elif '//hls-fpga-machine-learning insert directives' in line:
@@ -119,9 +137,14 @@ class PynqWriter(VivadoWriter):
                     newline = ''
                     newline += indent + 'LOAD: {\n'
                     newline += indent + indent + '#pragma HLS INLINE off\n'
-                    newline += indent + indent + 'for(unsigned i = 0; i < N_IN; i++){\n'
+                    newline += indent + indent + 'for(unsigned i = 0; i < AXI_IN; i++){\n'
                     newline += indent + indent + indent + '#pragma HLS UNROLL\n'
-                    newline += indent + indent + indent + 'in_local[i] = in[i]; // Read input with cast\n'
+                    newline += indent + indent + indent + 'input_axi_t axi_data = in[i];\n'
+                    newline += indent + indent + indent + 'for (unsigned j = 0; j < WCOUNT_IN; j++) {\n'
+                    newline += indent + indent + indent + indent + '#pragma HLS UNROLL\n'
+    	            newline += indent + indent + indent + indent + 'data.range(input_t::width-1, 0) = axi_data.range(((j+1)*input_t::width)-1 , j*input_t::width);'
+     	            newline += indent + indent + indent + indent + 'in_local[i * WCOUNT_IN + j].range(input_t::width-1, 0) = data.range(input_t::width-1, 0);'
+                    newline += indent + indent + indent + '}\n'
                     newline += indent + indent + '}\n'
                     newline += indent + '}\n'
                 elif io_type == 'io_stream':
@@ -143,9 +166,15 @@ class PynqWriter(VivadoWriter):
                     newline = ''
                     newline += indent + 'STORE: {\n'
                     newline += indent + indent + '#pragma HLS INLINE off\n'
-                    newline += indent + indent + 'for(unsigned i = 0; i < N_OUT; i++){\n'
+                    newline += indent + indent + 'for (unsigned i = 0; i < AXI_OUT; i++) {\n'
                     newline += indent + indent + indent + '#pragma HLS UNROLL\n'
-                    newline += indent + indent + indent + 'out[i] = out_local[i]; // Write output with cast\n'
+                    newline += indent + indent + indent + 'output_axi_t axi_data;\n'
+                    newline += indent + indent + indent + 'for (unsigned j = 0; j < WCOUNT_OUT; j++) {\n'
+                    newline += indent + indent + indent + indent + '#pragma HLS UNROLL\n'
+                    newline += indent + indent + indent + indent + 'result_t data = out_local[i * WCOUNT_OUT + j];\n'
+                    newline += indent + indent + indent + indent + 'axi_data.range(((j+1)*result_t::width)-1 , j*result_t::width) = data.range(result_t::width-1, 0);'
+                    newline += indent + indent + indent + '}\n'
+    		    newline += indent + indent + indent + 'out[i] = axi_data;\n'
                     newline += indent + indent + '}\n'
                     newline += indent + '}\n'
                 elif io_type == 'io_stream':

@@ -21,6 +21,7 @@ class HLSConfig(object):
 
         self.backend = get_backend(self.config.get('Backend', 'Vivado'))
         self.interface = self.config.get('Interface', 's_axilite')
+        self.axi_width = self.config.get('AxiWidth', '32')
         self.implementation = self.config.get('Implementation', 'serial')
         self.writer = get_writer(self.config.get('Backend', 'Vivado'))
 
