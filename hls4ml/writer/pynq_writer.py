@@ -168,7 +168,7 @@ class PynqWriter(VivadoWriter):
                     newline += indent + indent + 'for(unsigned i = 0; i < AXI_IN; i++){\n'
                     newline += indent + indent + indent + '#pragma HLS UNROLL\n'
                     newline += indent + indent + indent + 'input_axi_t axi_data = in[i];\n'
-                    newline += indent + indent + indent + 'for (unsigned j = 0; j < WCOUNT_IN; j++) { --------------------\n'
+                    newline += indent + indent + indent + 'for (unsigned j = 0; j < WCOUNT_IN; j++) {\n'
                     newline += indent + indent + indent + indent + '#pragma HLS UNROLL\n'
                     newline += indent + indent + indent + indent + 'input_t data;\n'
                     newline += indent + indent + indent + indent + 'data.range(input_t::width-1, 0) = axi_data.range(((j+1)*input_t::width)-1 , j*input_t::width);\n'
