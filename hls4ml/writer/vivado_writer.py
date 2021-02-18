@@ -396,10 +396,7 @@ class VivadoWriter(Writer):
 
             #Insert numbers
             if 'myproject' in line:
-                if model.config.interface == 'm_axi':
-                    newline = line.replace('myproject', model.config.get_project_name() + "_axi")
-                else:
-                    newline = line.replace('myproject', model.config.get_project_name())
+                newline = line.replace('myproject', model.config.get_project_name())
             elif '//hls-fpga-machine-learning insert data' in line:
                 newline = line
                 offset = 0
@@ -409,11 +406,6 @@ class VivadoWriter(Writer):
                     offset += inp.size()
                 for out in model.get_output_variables():
                     newline += '      ' + self.variable_definition_cpp(model, out) + ';\n'
-                if model.config.interface == 'm_axi':
-                    for inp in model.get_input_variables():
-                        newline += '      ' + self.variable_definition_cpp(model, inp, '_axi') + ';\n'
-                    for out in model.get_output_variables():
-                        newline += '      ' + self.variable_definition_cpp(model, out, '_axi') + ';\n'
             elif '//hls-fpga-machine-learning insert zero' in line:
                 newline = line
                 for inp in model.get_input_variables():
@@ -422,38 +414,17 @@ class VivadoWriter(Writer):
                 for out in model.get_output_variables():
                     newline += '    ' + self.variable_definition_cpp(model, out) + ';\n'
             elif '//hls-fpga-machine-learning insert top-level-function' in line:
-                if model.config.interface == 'm_axi':
-                    newline += '    for(unsigned i = 0; i < AXI_IN; i++){\n'
-                    newline += '            input_axi_t axi_data;\n'
-                    newline += '            for (unsigned j = 0; j < WCOUNT_IN; j++) {\n'
-                    newline += '                if (i * WCOUNT_IN + j >= N_IN) continue;\n'
-                    newline += '                input_t data = fc1_input[i * WCOUNT_IN + j];\n'
-                    newline += '                axi_data.range(((j+1)*input_t::width)-1 , j*input_t::width) = data.range(input_t::width-1, 0);\n'
-                    newline += '            }\n'
-                    newline += '            axi_fc1_input[i] = axi_data;\n'
-                    newline += '    }\n'
-                    newline += '    jet_tagger_axi(axi_fc1_input,axi_layer13_out);\n'
-                    newline += '    for(unsigned i = 0; i < AXI_OUT; i++){\n'
-                    newline += '        output_axi_t axi_data = axi_layer13_out[i];\n'
-                    newline += '        for (unsigned j = 0; j < WCOUNT_OUT; j++) {\n'
-                    newline += '            if (i * WCOUNT_OUT + j >= N_OUT) continue;\n'
-                    newline += '            result_t data;\n'
-                    newline += '            data.range(result_t::width-1, 0) = axi_data.range(((j+1)*result_t::width)-1 , j*result_t::width);\n'
-                    newline += '            layer13_out[i * WCOUNT_OUT + j].range(result_t::width-1, 0) = data.range(result_t::width-1, 0);\n'
-                    newline += '        }\n'
-                    newline += '    }\n'
-                else:
-                    newline = line
+                newline = line
 
-                    size_str = indent + 'unsigned short {},{};\n'
-                    input_size_vars = ','.join(['size_in{}'.format(i) for i in range(1, len(model.get_input_variables()) + 1)])
-                    output_size_vars = ','.join(['size_out{}'.format(o) for o in range(1, len(model.get_output_variables()) + 1)])
-                    newline += size_str.format(input_size_vars, output_size_vars)
+                size_str = indent + 'unsigned short {},{};\n'
+                input_size_vars = ','.join(['size_in{}'.format(i) for i in range(1, len(model.get_input_variables()) + 1)])
+                output_size_vars = ','.join(['size_out{}'.format(o) for o in range(1, len(model.get_output_variables()) + 1)])
+                newline += size_str.format(input_size_vars, output_size_vars)
 
-                    input_vars = ','.join([i.cppname for i in model.get_input_variables()])
-                    output_vars = ','.join([o.cppname for o in model.get_output_variables()])
-                    top_level = indent + '{}({},{},{},{});\n'.format(model.config.get_project_name(), input_vars, output_vars, input_size_vars, output_size_vars)
-                    newline += top_level
+                input_vars = ','.join([i.cppname for i in model.get_input_variables()])
+                output_vars = ','.join([o.cppname for o in model.get_output_variables()])
+                top_level = indent + '{}({},{},{},{});\n'.format(model.config.get_project_name(), input_vars, output_vars, input_size_vars, output_size_vars)
+                newline += top_level
             elif '//hls-fpga-machine-learning insert predictions' in line:
                 newline = line
                 for out in model.get_output_variables():

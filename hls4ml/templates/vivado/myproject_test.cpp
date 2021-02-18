@@ -25,8 +25,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-//#include "firmware/myproject.h"
-//hls-fpga-machine-learning insert include
+#include "firmware/myproject.h"
 #include "firmware/nnet_utils/nnet_helpers.h"
 
 #define CHECKPOINT 5000
