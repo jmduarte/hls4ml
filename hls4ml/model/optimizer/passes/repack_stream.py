@@ -54,3 +54,35 @@ class ReshapeStream(OptimizerPass):
         model.replace_node(node, repack_layer)
 
         return True
+
+class BroadcastStream(OptimizerPass):
+    def match(self, node):
+        if node.__class__.__name__ == 'Merge':
+            inp1 = node.get_input_variable(node.inputs[0])
+            inp2 = node.get_input_variable(node.inputs[1])
+            return inp1.shape != inp2.shape
+        else:
+            return False
+        
+    def transform(self, model, node):
+        if model.config.backend.name not in ['Vivado', 'Pynq'] or \
+            model.config.get_config_value('IOType') != 'io_stream':
+            return False
+            
+        inp1 = node.get_input_variable(node.inputs[0])
+        inp2 = node.get_input_variable(node.inputs[1])
+        if np.prod(inp1.shape) > np.prod(inp2.shape):
+            idx = 1
+            attrs = {
+                'target_shape': inp1.shape
+            }
+        else:
+            idx = 0
+            attrs = {
+                'target_shape': inp2.shape
+            }
+        brdcst_layer = model.make_node('Repack', 'repack_' + node.inputs[idx], attrs, [node.inputs[idx]].copy())
+        node.inputs[idx] = 'repack_' + node.inputs[idx]
+        model.insert_node(brdcst_layer)
+
+        return True
