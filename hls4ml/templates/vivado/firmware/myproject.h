@@ -20,8 +20,10 @@
 #ifndef MYPROJECT_H_
 #define MYPROJECT_H_
 
+#ifndef __HLS4ML_STANDALONE__
 #include <gmp.h>
 #define __gmp_const const
+#endif
 
 #include "ap_int.h"
 #include "ap_fixed.h"
