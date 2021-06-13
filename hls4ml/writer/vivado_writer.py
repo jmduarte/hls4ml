@@ -297,7 +297,9 @@ class VivadoWriter(Writer):
             if '//hls-fpga-machine-learning insert numbers' in line:
                 newline = line
                 numbers = OrderedDict.fromkeys([layer.get_numbers_cpp() for layer in model.get_layers()])
-                newline += ''.join(numbers)
+                numbers = set('\n'.join(numbers).split('\n')) #we want a unique set of macro declarations, since some of the macros are shared between different NN-blocks
+                newline += '\n'.join([i for i in numbers if i!=''])
+                newline += '\n' #for formatting purposes
 
             elif '//hls-fpga-machine-learning insert layer-precision' in line:
                 newline = line
@@ -657,7 +659,15 @@ class VivadoWriter(Writer):
             pass
 
         with open(model.config.get_output_dir() + '/' + config_filename, 'w') as file:
-            yaml.dump(model.config.config, file)
+            try:
+                yaml.dump(model.config.config, file)
+            except ValueError:
+                temp_config = model.config.config
+                del temp_config["PytorchModel"]
+                yaml.dump(temp_config, file)
+            finally:
+                import warnings
+                warnings.warn("\nWARNING: hls4ml_config.yml file not YAML.dump-able\n")
 
     def write_tar(self, model):
         ###################
