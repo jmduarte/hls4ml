@@ -13,6 +13,7 @@ from hls4ml.model.optimizer.passes.pointwise import OptimizePointwiseConv
 from hls4ml.model.optimizer.passes.conv_single_output import OptimizeSingleOutConv
 from hls4ml.model.optimizer.passes.clone import CloneOutput
 from hls4ml.model.optimizer.passes.repack_stream import ReshapeStream, BroadcastStream
+from hls4ml.model.optimizer.passes.transpose_opt import RemoveUselessTranspose
 from hls4ml.model.optimizer.passes.multi_dense import ReplaceMultidimensionalDenseWithConv
 
 try:
@@ -34,6 +35,7 @@ register_pass('optimize_pointwise_conv', OptimizePointwiseConv)
 register_pass('optimize_single_out_conv', OptimizeSingleOutConv)
 register_pass('clone_output', CloneOutput)
 register_pass('reshape_stream', ReshapeStream)
+register_pass('remove_useless_transpose', RemoveUselessTranspose)
 register_pass('replace_multidense_conv', ReplaceMultidimensionalDenseWithConv)
 register_pass('broadcast_stream', BroadcastStream)
 
