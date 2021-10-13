@@ -175,9 +175,12 @@ def types_hlsmodel(model):
     data['low'].append(-F)
     data['high'].append(I-1 if S else I)
 
-    for layer in model.get_layers():
+    for layer in model.get_layers():    
         for iw, weight in enumerate(layer.get_weights()):
-            wname = '{}/{}'.format(layer.name, suffix[iw])
+            if iw < 2:
+              wname = '{}/{}'.format(layer.name, suffix[iw])
+            else:
+              wname = '{}/{}'.format(layer.name, iw)
             T = weight.type
             if T.name != 'model':
                 W, I, F, S = ap_fixed_WIFS(T.precision)
