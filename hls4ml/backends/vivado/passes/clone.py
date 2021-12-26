@@ -1,6 +1,6 @@
 import numpy as np
 
-from hls4ml.model.optimizer import OptimizerPass
+from hls4ml.model.optimizer import OptimizerPass, node_output_use_map
 
 from hls4ml.model.layers import Layer, register_layer
 from hls4ml.backends import get_backend
@@ -52,13 +52,7 @@ class CloneOutput(OptimizerPass):
         if model.config.get_config_value('IOType') != 'io_stream':
             return False
 
-        output_map = {}
-        for output in node.outputs:
-            output_map[output] = []
-            for layer in model.get_layers():
-                for inp in layer.inputs:
-                    if output == inp:
-                        output_map[output].append(layer)
+        output_map = node_output_use_map(model, node)
 
         transformed = False
         for output in node.outputs:
