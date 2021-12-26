@@ -1,4 +1,4 @@
-from hls4ml.model.optimizer import OptimizerPass, ConfigurableOptimizerPass, register_pass, node_output_use_mape
+from hls4ml.model.optimizer import OptimizerPass, ConfigurableOptimizerPass, register_pass, node_output_use_map
 from hls4ml.model.layers import BatchNormalization, Dense, Conv1D, Conv2D, register_layer, layer_map
 from hls4ml.model.types import IntegerPrecisionType, FixedPrecisionType, ExponentPrecisionType, NamedType
 import tensorflow as tf
