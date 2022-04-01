@@ -20,16 +20,35 @@ def parse_garnet_layer(keras_layer, input_names, input_shapes, data_reader, conf
     layer['n_vertices'] = input_shapes[0][1]
     layer['collapse'] = keras_layer['config']['collapse']
     layer['mean_by_nvert'] = keras_layer['config']['mean_by_nvert']
+    
     if keras_layer['config']['quantize_transforms']:
-        bits = keras_layer['config']['total_bits']
-        int_bits = keras_layer['config']['int_bits']
-        if bits == 1:
-          config = {'class_name' : 'binary', 'config' : {'bits' : bits, 'integer' : int_bits}}
-        elif bits == 2:
-          config = {'class_name' : 'ternary', 'config' : {'bits' : bits, 'integer' : int_bits}}
+        print(keras_layer)
+      
+        kernel = keras_layer['config']['kernel_quant']
+        bias = keras_layer['config']['bias_quant']
+        
+        # kernel = 'quantized_bits(8,0,alpha=1)'
+#         bias = 'quantized_bits(8,0,alpha=1)'
+        if 'binary' in kernel:
+          config_w = {'class_name' : 'binary', 'config' : {'alpha' : int(kernel.split('(')[1][0])}}
+        elif 'ternary' in kernel:  
+          config_w = {'class_name' : 'ternary', 'config' : {'alpha' : int(kernel.split('(')[1][0])}}
+        elif 'quantized_bits' in kernel:  
+          config_w = {'class_name' : 'quantized_bits', 'config' : {'bits' : int(kernel.split('(')[1][0]), 'integer' : int(kernel.split('(')[1][2])}}
         else:
-          config = {'class_name' : 'quantized_bits', 'config' : {'bits' : bits, 'integer' : int_bits}}
-        layer['quantizer'] = QKerasQuantizer(config)
+          raise NotImplementedError('HLS GarNet currently only implements binary, ternary or quantized_bits QKeras quantizers!') 
+
+        if 'binary' in bias:
+          config_b = {'class_name' : 'binary', 'config' : {'alpha' : int(kernel.split('(')[1][0])}}
+        elif 'ternary' in bias:  
+           config_b = {'class_name' : 'ternary', 'config' : {'alpha' : int(kernel.split('(')[1][0])}}
+        elif 'quantized_bits' in bias:  
+           config_b = {'class_name' : 'quantized_bits', 'config' : {'bits' : int(kernel.split('(')[1][0]), 'integer' : int(kernel.split('(')[1][2])}}
+        else:
+          raise NotImplementedError('HLS GarNet currently only implements binary, ternary or quantized_bits QKeras quantizers!') 
+
+        layer['weight_quantizer'] =  QKerasQuantizer(config_w)
+        layer['bias_quantizer'] =  QKerasQuantizer(config_b)
         
     layer['n_aggregators'] = keras_layer['config']['n_aggregators']
     layer['n_out_features'] = keras_layer['config']['n_filters'] # number of output features

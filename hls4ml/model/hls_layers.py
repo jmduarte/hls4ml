@@ -1627,11 +1627,11 @@ class GarNet(Layer):
             ]
 
         else:
-            quantize = (self.get_attr('quantizer') is not None)
+            quantize = (self.get_attr('weight_quantizer') is not None)
             kernel, bias = self._make_input_transform_weights(n_propagate, n_aggregators, n_out_features, quantize=quantize)
 
-            self._add_variable('input_transform_weights', 'input_transform_w{index}', kernel, frac_width=10, quantize=quantize)
-            self._add_variable('input_transform_biases', 'input_transform_b{index}', bias, frac_width=10, quantize=quantize)
+            self._add_variable('input_transform_weights', 'input_transform_w{index}', kernel, frac_width=10, quantizer=self.get_attr('weight_quantizer'))
+            self._add_variable('input_transform_biases', 'input_transform_b{index}', bias, frac_width=10, quantizer=self.get_attr('bias_quantizer'))
             #dummy
             self.add_weights_variable(name='output_transform_weights', var_name='output_transform_w{index}', data=np.ones(1))
 
@@ -1652,7 +1652,7 @@ class GarNet(Layer):
             name = '{}_{}'.format(op_name, vtype)
             var_name = '{}_{}{{index}}'.format(op_name, vtype[0])
 
-            self._add_variable(name, var_name, data, frac_width=10, quantize=False)
+            self._add_variable(name, var_name, data, frac_width=10, quantizer=None)
 
         self._output_features = self.attributes['n_out_features']
 
@@ -1662,23 +1662,23 @@ class GarNet(Layer):
         output_transform_kernel = self.model.get_weights_data(self.name, '{name}/Fout{sublayer}_kernel:0'.format(name=self.name, sublayer=sublayer)) # [(n_aggregators, n_propagate), n_out_features]
         output_transform_kernel = output_transform_kernel.reshape((n_aggregators, n_propagate, n_out_features))
         if quantize:
-            output_transform_kernel = self.get_attr('quantizer')(output_transform_kernel)
+            output_transform_kernel = self.get_attr('weight_quantizer')(output_transform_kernel)
 
         input_transform_kernel = self.model.get_weights_data(self.name, '{name}/FLR{sublayer}_kernel:0'.format(name=self.name, sublayer=sublayer)) # [n_in_features, n_propagate]
         if quantize:
-            input_transform_kernel = self.get_attr('quantizer')(input_transform_kernel)
+            input_transform_kernel = self.get_attr('weight_quantizer')(input_transform_kernel)
         data = np.dot(input_transform_kernel, output_transform_kernel) # [n_in_features, n_aggregators, n_out_features]
         kernel = data.transpose((2, 1, 0))
 
         input_transform_bias = self.model.get_weights_data(self.name, '{name}/FLR{sublayer}_bias:0'.format(name=self.name, sublayer=sublayer)) # [n_propagate]
         if quantize:
-            input_transform_bias = self.get_attr('quantizer')(input_transform_bias)
+            input_transform_bias = self.get_attr('bias_quantizer')(input_transform_bias)
         data = np.dot(input_transform_bias, output_transform_kernel) # [n_aggregators, n_out_features]
         bias = data.transpose((1, 0))
 
         return kernel, bias
 
-    def _add_variable(self, name, var_name, data, frac_width=10, quantize=False):
+    def _add_variable(self, name, var_name, data, frac_width=10, quantizer=None):
         # Wrapper for add_weights_variable with precision determination from data
 
         # automatically make the variable unsigned if data are all positive
@@ -1686,13 +1686,12 @@ class GarNet(Layer):
         
         int_width = find_minimum_width(data, signed=signed)
 
-        if quantize:
-            precision = self.get_attr('quantizer').hls_type
+        if quantizer:
+            self.add_weights_variable(name=name, var_name=var_name, data=data, quantizer=quantizer)
         else:
             width = int_width + frac_width
             precision = FixedPrecisionType(width=width, integer=int_width, signed=signed, rounding_mode='AP_RND', saturation_mode='AP_SAT')
-            
-        self.add_weights_variable(name=name, var_name=var_name, data=data, precision=precision)
+            self.add_weights_variable(name=name, var_name=var_name, data=data, precision=precision)
         
     def function_cpp(self):
         params = self._default_function_params()
