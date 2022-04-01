@@ -208,7 +208,7 @@ def activation_types_hlsmodel(model):
     return data
 
 def weights_hlsmodel(model, fmt='longform', plot='boxplot'):
-    suffix = ['w', 'b']
+    suffix = ['w', 'b']*3
     if fmt == 'longform':
         data = {'x' : [], 'layer' : [], 'weight' : []}
     elif fmt == 'summary':
@@ -217,6 +217,10 @@ def weights_hlsmodel(model, fmt='longform', plot='boxplot'):
     for layer in model.get_layers():
         name = layer.name
         for iw, weight in enumerate(layer.get_weights()):
+            # if len(layer.get_weights()) < 2:
+            #   l = '{}/{}'.format(name, suffix[iw])
+            # else:
+            #   l = '{}/{}'.format(name, weight.name)
             l = '{}/{}'.format(name, suffix[iw])
             w = weight.data.flatten()
             w = abs(w[w != 0])
@@ -269,8 +273,8 @@ def activations_hlsmodel(model, X, fmt='summary', plot='boxplot'):
         raise NotImplemented
     elif fmt == 'summary':
         data = []
-
-    _, trace = model.trace(np.ascontiguousarray(X))
+    # _, trace = model.trace(np.ascontiguousarray(X))
+    _, trace = model.trace((X))
 
     if len(trace) == 0:
         raise RuntimeError("HLSModel must have tracing on for at least 1 layer (this can be set in its config)")
