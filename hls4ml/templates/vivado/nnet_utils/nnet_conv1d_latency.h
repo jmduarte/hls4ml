@@ -63,8 +63,8 @@ void conv_1d_latency_cl(
     #pragma HLS ARRAY_PARTITION variable=biases complete dim=0
 
     // Limit multipliers to control parallelization
-    const int multiplier_limit = compute_multiplier_limit<CONFIG_T>(weights);
-    #pragma HLS ALLOCATION instances=mul limit=multiplier_limit operation
+    //const int multiplier_limit = compute_multiplier_limit<CONFIG_T>(weights);
+    //#pragma HLS ALLOCATION instances=mul limit=multiplier_limit operation
 
     // Convolve, saving all multiplication results to accumulate later
     ConvOut: for(int ii = 0; ii < CONFIG_T::out_width; ii++) {
@@ -119,16 +119,16 @@ void conv_1d_latency_cl(
 }
 
 template<class data_T, class res_T, typename CONFIG_T>
-void pointwise_conv_1d_cl(
-    data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],
-    res_T  res[CONFIG_T::out_width * CONFIG_T::n_filt],
+void pointwise_conv_1d_latency_cl(
+    data_T data[CONFIG_T::in_width * CONFIG_T::n_chan/CONFIG_T::reuse_factor],
+    res_T  res[CONFIG_T::out_width * CONFIG_T::n_filt/CONFIG_T::reuse_factor],
     typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],
     typename CONFIG_T::bias_t   biases[CONFIG_T::n_filt])
 {
     assert(CONFIG_T::filt_width == 1);
 
-    typename CONFIG_T::accum_t mult[CONFIG_T::out_width * CONFIG_T::n_filt * CONFIG_T::n_chan];
-    typename CONFIG_T::accum_t acc[CONFIG_T::out_width][CONFIG_T::n_filt];
+    typename CONFIG_T::accum_t mult[CONFIG_T::out_width * CONFIG_T::n_filt * CONFIG_T::n_chan/CONFIG_T::reuse_factor];
+    typename CONFIG_T::accum_t acc[CONFIG_T::out_width/CONFIG_T::reuse_factor][CONFIG_T::n_filt];
 
     #pragma HLS ARRAY_PARTITION variable=mult complete dim=0
     #pragma HLS ARRAY_PARTITION variable=acc complete dim=0
@@ -137,15 +137,15 @@ void pointwise_conv_1d_cl(
     #pragma HLS function_instantiate variable=weights,biases
 
     // Parallel mode
-    #pragma HLS PIPELINE
+    #pragma HLS PIPELINE II=CONFIG_T::reuse_factor
     #pragma HLS ARRAY_PARTITION variable=biases complete dim=0
 
     // Limit multipliers to control parallelization
-    const int multiplier_limit = compute_multiplier_limit<CONFIG_T>(weights);
-    #pragma HLS ALLOCATION instances=mul limit=multiplier_limit operation
+    //const int multiplier_limit = compute_multiplier_limit<CONFIG_T>(weights);
+    //#pragma HLS ALLOCATION instances=mul limit=multiplier_limit operation
 
     // Convolve, saving all multiplication results to accumulate later
-    ConvOut: for(int ii = 0; ii < CONFIG_T::out_width; ii++) {
+    ConvOut: for(int ii = 0; ii < CONFIG_T::out_width/CONFIG_T::reuse_factor; ii++) {
         ConvFilt: for(int ff = 0; ff < CONFIG_T::n_filt; ff++) {
             ConvChan: for(int cc = 0; cc < CONFIG_T::n_chan; cc++) {
                 int index_mult   = ii*CONFIG_T::n_filt*CONFIG_T::n_chan + ff*CONFIG_T::n_chan + cc;
@@ -164,7 +164,7 @@ void pointwise_conv_1d_cl(
 
 
     // Initialize accumulator with input biases
-    for(int ii = 0; ii < CONFIG_T::out_width; ii++) {
+    for(int ii = 0; ii < CONFIG_T::out_width/CONFIG_T::reuse_factor; ii++) {
         for(int ff = 0; ff < CONFIG_T::n_filt; ff++) {
             acc[ii][ff]=biases[ff];
         }
@@ -172,7 +172,7 @@ void pointwise_conv_1d_cl(
 
 
     // Accumulate multiplication result
-    AccumOut: for(int ii = 0; ii < CONFIG_T::out_width; ii++) {
+    AccumOut: for(int ii = 0; ii < CONFIG_T::out_width/CONFIG_T::reuse_factor; ii++) {
         AccumFilt: for(int ff = 0; ff < CONFIG_T::n_filt; ff++) {
             //Do "dot product" sum within filter and sum over channels
             AccumChan: for(int cc = 0; cc < CONFIG_T::n_chan; cc++) {
@@ -184,9 +184,145 @@ void pointwise_conv_1d_cl(
 
 
     // Cast to "res_t" type
-    for(int ii = 0; ii < CONFIG_T::out_width; ii++) {
+    for(int ii = 0; ii < CONFIG_T::out_width/CONFIG_T::reuse_factor; ii++) {
         for(int ff = 0; ff < CONFIG_T::n_filt; ff++) {
             res[ii * CONFIG_T::n_filt + ff] = (res_T)(acc[ii][ff]);
+        }
+    }
+}
+
+template<class data_T, class res_T, typename CONFIG_T>
+void pointwise_conv_1d_latency_cl_split2(
+    data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],
+    res_T  res[CONFIG_T::out_width * CONFIG_T::n_filt],
+    typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],
+    typename CONFIG_T::bias_t   biases[CONFIG_T::n_filt])
+{
+
+    data_T data_tmp[2][CONFIG_T::in_width*CONFIG_T::n_chan/2];
+    #pragma HLS ARRAY_PARTITION variable=data_tmp complete dim=0
+    res_T res_tmp[2][CONFIG_T::out_width*CONFIG_T::n_filt/2];
+    #pragma HLS ARRAY_PARTITION variable=res_tmp complete dim=0
+    
+    for(int jj = 0; jj < 2; jj++) {
+        for(int ii = 0; ii < CONFIG_T::in_width*CONFIG_T::n_chan/2; ii++) {
+            #pragma HLS UNROLL
+            data_tmp[jj][ii] = data[jj*CONFIG_T::in_width*CONFIG_T::n_chan/2+ii];
+        }
+    }
+
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[0], res_tmp[0], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[1], res_tmp[1], weights, biases);
+
+    for(int jj = 0; jj < 2; jj++) {
+        for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/2; ii++) {
+            #pragma HLS UNROLL
+            res[jj*CONFIG_T::out_width*CONFIG_T::n_filt/2+ii] = res_tmp[jj][ii];
+        }
+    }
+}
+
+template<class data_T, class res_T, typename CONFIG_T>
+void pointwise_conv_1d_latency_cl_split4(
+    data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],
+    res_T  res[CONFIG_T::out_width * CONFIG_T::n_filt],
+    typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],
+    typename CONFIG_T::bias_t   biases[CONFIG_T::n_filt])
+{
+
+    data_T data_tmp[4][CONFIG_T::in_width*CONFIG_T::n_chan/4];
+    #pragma HLS ARRAY_PARTITION variable=data_tmp complete dim=0
+    res_T res_tmp[4][CONFIG_T::out_width*CONFIG_T::n_filt/4];
+    #pragma HLS ARRAY_PARTITION variable=res_tmp complete dim=0
+    
+    for(int jj = 0; jj < 4; jj++) {
+        for(int ii = 0; ii < CONFIG_T::in_width*CONFIG_T::n_chan/4; ii++) {
+            #pragma HLS UNROLL
+            data_tmp[jj][ii] = data[jj*CONFIG_T::in_width*CONFIG_T::n_chan/4+ii];
+        }
+    }
+
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[0], res_tmp[0], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[1], res_tmp[1], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[2], res_tmp[2], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[3], res_tmp[3], weights, biases);
+
+    for(int jj = 0; jj < 4; jj++) {
+        for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/4; ii++) {
+            #pragma HLS UNROLL
+            res[jj*CONFIG_T::out_width*CONFIG_T::n_filt/4+ii] = res_tmp[jj][ii];
+        }
+    }
+}
+
+template<class data_T, class res_T, typename CONFIG_T>
+void pointwise_conv_1d_latency_cl_split6(
+    data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],
+    res_T  res[CONFIG_T::out_width * CONFIG_T::n_filt],
+    typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],
+    typename CONFIG_T::bias_t   biases[CONFIG_T::n_filt])
+{
+
+    data_T data_tmp[6][CONFIG_T::in_width*CONFIG_T::n_chan/6];
+    #pragma HLS ARRAY_PARTITION variable=data_tmp complete dim=0
+    res_T res_tmp[6][CONFIG_T::out_width*CONFIG_T::n_filt/6];
+    #pragma HLS ARRAY_PARTITION variable=res_tmp complete dim=0
+    
+    for(int jj = 0; jj < 6; jj++) {
+        for(int ii = 0; ii < CONFIG_T::in_width*CONFIG_T::n_chan/6; ii++) {
+            #pragma HLS UNROLL
+            data_tmp[jj][ii] = data[jj*CONFIG_T::in_width*CONFIG_T::n_chan/6+ii];
+        }
+    }
+
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[0], res_tmp[0], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[1], res_tmp[1], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[2], res_tmp[2], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[3], res_tmp[3], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[4], res_tmp[4], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[5], res_tmp[5], weights, biases);
+
+    for(int jj = 0; jj < 6; jj++) {
+        for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/6; ii++) {
+            #pragma HLS UNROLL
+            res[jj*CONFIG_T::out_width*CONFIG_T::n_filt/6+ii] = res_tmp[jj][ii];
+        }
+    }
+}
+
+template<class data_T, class res_T, typename CONFIG_T>
+void pointwise_conv_1d_latency_cl_split8(
+    data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],
+    res_T  res[CONFIG_T::out_width * CONFIG_T::n_filt],
+    typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],
+    typename CONFIG_T::bias_t   biases[CONFIG_T::n_filt])
+{
+
+    data_T data_tmp[8][CONFIG_T::in_width*CONFIG_T::n_chan/8];
+    #pragma HLS ARRAY_PARTITION variable=data_tmp complete dim=0
+    res_T res_tmp[8][CONFIG_T::out_width*CONFIG_T::n_filt/8];
+    #pragma HLS ARRAY_PARTITION variable=res_tmp complete dim=0
+    
+    for(int jj = 0; jj < 8; jj++) {
+        for(int ii = 0; ii < CONFIG_T::in_width*CONFIG_T::n_chan/8; ii++) {
+            #pragma HLS UNROLL
+            data_tmp[jj][ii] = data[jj*CONFIG_T::in_width*CONFIG_T::n_chan/8+ii];
+        }
+    }
+
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[0], res_tmp[0], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[1], res_tmp[1], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[2], res_tmp[2], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[3], res_tmp[3], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[4], res_tmp[4], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[5], res_tmp[5], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[6], res_tmp[6], weights, biases);
+    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[7], res_tmp[7], weights, biases);
+
+    for(int jj = 0; jj < 8; jj++) {
+        for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/8; ii++) {
+            #pragma HLS UNROLL
+            res[jj*CONFIG_T::out_width*CONFIG_T::n_filt/8+ii] = res_tmp[jj][ii];
         }
     }
 }
