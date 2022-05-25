@@ -75,7 +75,13 @@ void pointwise_conv_1d_cl(
     assert(CONFIG_T::filt_width == 1);
 
     if (CONFIG_T::strategy == nnet::latency) {
-        if (CONFIG_T::reuse_factor == 8) {
+        if (CONFIG_T::reuse_factor == 32) {
+            pointwise_conv_1d_latency_cl_split32<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+      }
+        else if (CONFIG_T::reuse_factor == 16) {
+            pointwise_conv_1d_latency_cl_split16<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+      }
+        else if (CONFIG_T::reuse_factor == 8) {
             pointwise_conv_1d_latency_cl_split8<data_T, res_T, CONFIG_T>(data, res, weights, biases);
       }
         else if (CONFIG_T::reuse_factor == 6) {
