@@ -1,4 +1,4 @@
-from hls4ml.model.optimizer import OptimizerPass, ConfigurableOptimizerPass, register_pass, node_output_use_map
+from hls4ml.model.optimizer import OptimizerPass, ConfigurableOptimizerPass, register_pass
 from hls4ml.model.layers import BatchNormalization, Dense, Conv1D, Conv2D, register_layer, layer_map
 from hls4ml.model.types import IntegerPrecisionType, FixedPrecisionType, ExponentPrecisionType, NamedType
 import tensorflow as tf
@@ -219,8 +219,8 @@ class FuseConsecutiveBatchNormalization(OptimizerPass):
     def transform(self, model, node):
         bn0 = node.get_input_node()
         bn1 = node
-        bn0_map = node_output_use_map(model, bn0)
-        bn1_map = node_output_use_map(model, bn1)
+        bn0_map = bn0.get_output_use_map()
+        bn1_map = bn1.get_output_use_map()
         if len(bn0_map[bn0.name]) > 1 or len(bn1_map[bn1.name]) > 1:
             return False
 
