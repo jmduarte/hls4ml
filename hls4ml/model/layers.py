@@ -147,7 +147,6 @@ class Layer(object):
         else:
             outputs = self.outputs
         for output in outputs:
-            output_map[output] = []
             for layer in self.model.get_layers():
                 for inp in layer.inputs:
                     if output == inp:
