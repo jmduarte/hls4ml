@@ -191,242 +191,62 @@ void pointwise_conv_1d_latency_cl(
     }
 }
 
-template<class data_T, class res_T, typename CONFIG_T>
-void pointwise_conv_1d_latency_cl_split2(
+template<class data_T, class res_T, typename CONFIG_T> void pointwise_conv_1d_latency_cl_split_by_rf(
     data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],
     res_T  res[CONFIG_T::out_width * CONFIG_T::n_filt],
     typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],
     typename CONFIG_T::bias_t   biases[CONFIG_T::n_filt])
 {
 
-    data_T data_tmp[2][CONFIG_T::in_width*CONFIG_T::n_chan/2];
+    data_T data_tmp[CONFIG_T::reuse_factor][CONFIG_T::in_width*CONFIG_T::n_chan/CONFIG_T::reuse_factor];
     #pragma HLS ARRAY_PARTITION variable=data_tmp complete dim=0
-    res_T res_tmp[2][CONFIG_T::out_width*CONFIG_T::n_filt/2];
+    res_T res_tmp[CONFIG_T::reuse_factor][CONFIG_T::out_width*CONFIG_T::n_filt/CONFIG_T::reuse_factor];
     #pragma HLS ARRAY_PARTITION variable=res_tmp complete dim=0
     
-    for(int jj = 0; jj < 2; jj++) {
-        for(int ii = 0; ii < CONFIG_T::in_width*CONFIG_T::n_chan/2; ii++) {
+    for(int jj = 0; jj < CONFIG_T::reuse_factor; jj++) {
+        for(int ii = 0; ii < CONFIG_T::in_width*CONFIG_T::n_chan/CONFIG_T::reuse_factor; ii++) {
             #pragma HLS UNROLL
-            data_tmp[jj][ii] = data[jj*CONFIG_T::in_width*CONFIG_T::n_chan/2+ii];
+            data_tmp[jj][ii] = data[ii*CONFIG_T::reuse_factor+jj];
         }
     }
 
     pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[0], res_tmp[0], weights, biases);
     pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[1], res_tmp[1], weights, biases);
+    if (CONFIG_T::reuse_factor > 2) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[2], res_tmp[2], weights, biases);
+    if (CONFIG_T::reuse_factor > 3) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[3], res_tmp[3], weights, biases);
+    if (CONFIG_T::reuse_factor > 4) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[4], res_tmp[4], weights, biases);
+    if (CONFIG_T::reuse_factor > 5) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[5], res_tmp[5], weights, biases);
+    if (CONFIG_T::reuse_factor > 6) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[6], res_tmp[6], weights, biases);
+    if (CONFIG_T::reuse_factor > 7) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[7], res_tmp[7], weights, biases);
+    if (CONFIG_T::reuse_factor > 8) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[8], res_tmp[8], weights, biases);
+    if (CONFIG_T::reuse_factor > 9) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[9], res_tmp[9], weights, biases);
+    if (CONFIG_T::reuse_factor > 10) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[10], res_tmp[10], weights, biases);
+    if (CONFIG_T::reuse_factor > 11) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[11], res_tmp[11], weights, biases);
+    if (CONFIG_T::reuse_factor > 12) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[12], res_tmp[12], weights, biases);
+    if (CONFIG_T::reuse_factor > 13) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[13], res_tmp[13], weights, biases);
+    if (CONFIG_T::reuse_factor > 14) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[14], res_tmp[14], weights, biases);
+    if (CONFIG_T::reuse_factor > 15) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[15], res_tmp[15], weights, biases);
+    if (CONFIG_T::reuse_factor > 16) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[16], res_tmp[16], weights, biases);
+    if (CONFIG_T::reuse_factor > 17) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[17], res_tmp[17], weights, biases);
+    if (CONFIG_T::reuse_factor > 18) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[18], res_tmp[18], weights, biases);
+    if (CONFIG_T::reuse_factor > 19) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[19], res_tmp[19], weights, biases);
+    if (CONFIG_T::reuse_factor > 20) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[20], res_tmp[20], weights, biases);
+    if (CONFIG_T::reuse_factor > 21) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[21], res_tmp[21], weights, biases);
+    if (CONFIG_T::reuse_factor > 22) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[22], res_tmp[22], weights, biases);
+    if (CONFIG_T::reuse_factor > 23) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[23], res_tmp[23], weights, biases);
+    if (CONFIG_T::reuse_factor > 24) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[24], res_tmp[24], weights, biases);
+    if (CONFIG_T::reuse_factor > 25) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[25], res_tmp[25], weights, biases);
+    if (CONFIG_T::reuse_factor > 26) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[26], res_tmp[26], weights, biases);
+    if (CONFIG_T::reuse_factor > 27) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[27], res_tmp[27], weights, biases);
+    if (CONFIG_T::reuse_factor > 28) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[28], res_tmp[28], weights, biases);
+    if (CONFIG_T::reuse_factor > 29) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[29], res_tmp[29], weights, biases);
+    if (CONFIG_T::reuse_factor > 30) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[30], res_tmp[30], weights, biases);
+    if (CONFIG_T::reuse_factor > 31) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[31], res_tmp[31], weights, biases);
 
-    for(int jj = 0; jj < 2; jj++) {
-        for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/2; ii++) {
+    for(int jj = 0; jj < CONFIG_T::reuse_factor; jj++) {
+        for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/CONFIG_T::reuse_factor; ii++) {
             #pragma HLS UNROLL
-            res[jj*CONFIG_T::out_width*CONFIG_T::n_filt/2+ii] = res_tmp[jj][ii];
-        }
-    }
-}
-
-template<class data_T, class res_T, typename CONFIG_T>
-void pointwise_conv_1d_latency_cl_split4(
-    data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],
-    res_T  res[CONFIG_T::out_width * CONFIG_T::n_filt],
-    typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],
-    typename CONFIG_T::bias_t   biases[CONFIG_T::n_filt])
-{
-
-    data_T data_tmp[4][CONFIG_T::in_width*CONFIG_T::n_chan/4];
-    #pragma HLS ARRAY_PARTITION variable=data_tmp complete dim=0
-    res_T res_tmp[4][CONFIG_T::out_width*CONFIG_T::n_filt/4];
-    #pragma HLS ARRAY_PARTITION variable=res_tmp complete dim=0
-    
-    for(int jj = 0; jj < 4; jj++) {
-        for(int ii = 0; ii < CONFIG_T::in_width*CONFIG_T::n_chan/4; ii++) {
-            #pragma HLS UNROLL
-            data_tmp[jj][ii] = data[jj*CONFIG_T::in_width*CONFIG_T::n_chan/4+ii];
-        }
-    }
-
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[0], res_tmp[0], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[1], res_tmp[1], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[2], res_tmp[2], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[3], res_tmp[3], weights, biases);
-
-    for(int jj = 0; jj < 4; jj++) {
-        for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/4; ii++) {
-            #pragma HLS UNROLL
-            res[jj*CONFIG_T::out_width*CONFIG_T::n_filt/4+ii] = res_tmp[jj][ii];
-        }
-    }
-}
-
-template<class data_T, class res_T, typename CONFIG_T>
-void pointwise_conv_1d_latency_cl_split6(
-    data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],
-    res_T  res[CONFIG_T::out_width * CONFIG_T::n_filt],
-    typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],
-    typename CONFIG_T::bias_t   biases[CONFIG_T::n_filt])
-{
-
-    data_T data_tmp[6][CONFIG_T::in_width*CONFIG_T::n_chan/6];
-    #pragma HLS ARRAY_PARTITION variable=data_tmp complete dim=0
-    res_T res_tmp[6][CONFIG_T::out_width*CONFIG_T::n_filt/6];
-    #pragma HLS ARRAY_PARTITION variable=res_tmp complete dim=0
-    
-    for(int jj = 0; jj < 6; jj++) {
-        for(int ii = 0; ii < CONFIG_T::in_width*CONFIG_T::n_chan/6; ii++) {
-            #pragma HLS UNROLL
-            data_tmp[jj][ii] = data[jj*CONFIG_T::in_width*CONFIG_T::n_chan/6+ii];
-        }
-    }
-
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[0], res_tmp[0], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[1], res_tmp[1], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[2], res_tmp[2], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[3], res_tmp[3], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[4], res_tmp[4], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[5], res_tmp[5], weights, biases);
-
-    for(int jj = 0; jj < 6; jj++) {
-        for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/6; ii++) {
-            #pragma HLS UNROLL
-            res[jj*CONFIG_T::out_width*CONFIG_T::n_filt/6+ii] = res_tmp[jj][ii];
-        }
-    }
-}
-
-template<class data_T, class res_T, typename CONFIG_T>
-void pointwise_conv_1d_latency_cl_split8(
-    data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],
-    res_T  res[CONFIG_T::out_width * CONFIG_T::n_filt],
-    typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],
-    typename CONFIG_T::bias_t   biases[CONFIG_T::n_filt])
-{
-
-    data_T data_tmp[8][CONFIG_T::in_width*CONFIG_T::n_chan/8];
-    #pragma HLS ARRAY_PARTITION variable=data_tmp complete dim=0
-    res_T res_tmp[8][CONFIG_T::out_width*CONFIG_T::n_filt/8];
-    #pragma HLS ARRAY_PARTITION variable=res_tmp complete dim=0
-    
-    for(int jj = 0; jj < 8; jj++) {
-        for(int ii = 0; ii < CONFIG_T::in_width*CONFIG_T::n_chan/8; ii++) {
-            #pragma HLS UNROLL
-            data_tmp[jj][ii] = data[jj*CONFIG_T::in_width*CONFIG_T::n_chan/8+ii];
-        }
-    }
-
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[0], res_tmp[0], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[1], res_tmp[1], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[2], res_tmp[2], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[3], res_tmp[3], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[4], res_tmp[4], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[5], res_tmp[5], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[6], res_tmp[6], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[7], res_tmp[7], weights, biases);
-
-    for(int jj = 0; jj < 8; jj++) {
-        for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/8; ii++) {
-            #pragma HLS UNROLL
-            res[jj*CONFIG_T::out_width*CONFIG_T::n_filt/8+ii] = res_tmp[jj][ii];
-        }
-    }
-}
-
-template<class data_T, class res_T, typename CONFIG_T> void pointwise_conv_1d_latency_cl_split16(
-    data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],
-    res_T  res[CONFIG_T::out_width * CONFIG_T::n_filt],
-    typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],
-    typename CONFIG_T::bias_t   biases[CONFIG_T::n_filt])
-{
-
-    data_T data_tmp[16][CONFIG_T::in_width*CONFIG_T::n_chan/16];
-    #pragma HLS ARRAY_PARTITION variable=data_tmp complete dim=0
-    res_T res_tmp[16][CONFIG_T::out_width*CONFIG_T::n_filt/16];
-    #pragma HLS ARRAY_PARTITION variable=res_tmp complete dim=0
-    
-    for(int jj = 0; jj < 16; jj++) {
-        for(int ii = 0; ii < CONFIG_T::in_width*CONFIG_T::n_chan/16; ii++) {
-            #pragma HLS UNROLL
-            data_tmp[jj][ii] = data[jj*CONFIG_T::in_width*CONFIG_T::n_chan/16+ii];
-        }
-    }
-
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[0], res_tmp[0], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[1], res_tmp[1], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[2], res_tmp[2], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[3], res_tmp[3], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[4], res_tmp[4], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[5], res_tmp[5], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[6], res_tmp[6], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[7], res_tmp[7], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[8], res_tmp[8], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[9], res_tmp[9], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[10], res_tmp[10], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[11], res_tmp[11], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[12], res_tmp[12], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[13], res_tmp[13], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[14], res_tmp[14], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[15], res_tmp[15], weights, biases);
-
-    for(int jj = 0; jj < 16; jj++) {
-        for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/16; ii++) {
-            #pragma HLS UNROLL
-            res[jj*CONFIG_T::out_width*CONFIG_T::n_filt/16+ii] = res_tmp[jj][ii];
-        }
-    }
-}
-
-template<class data_T, class res_T, typename CONFIG_T> void pointwise_conv_1d_latency_cl_split32(
-    data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],
-    res_T  res[CONFIG_T::out_width * CONFIG_T::n_filt],
-    typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],
-    typename CONFIG_T::bias_t   biases[CONFIG_T::n_filt])
-{
-
-    data_T data_tmp[32][CONFIG_T::in_width*CONFIG_T::n_chan/32];
-    #pragma HLS ARRAY_PARTITION variable=data_tmp complete dim=0
-    res_T res_tmp[32][CONFIG_T::out_width*CONFIG_T::n_filt/32];
-    #pragma HLS ARRAY_PARTITION variable=res_tmp complete dim=0
-    
-    for(int jj = 0; jj < 32; jj++) {
-        for(int ii = 0; ii < CONFIG_T::in_width*CONFIG_T::n_chan/32; ii++) {
-            #pragma HLS UNROLL
-            data_tmp[jj][ii] = data[jj*CONFIG_T::in_width*CONFIG_T::n_chan/32+ii];
-        }
-    }
-
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[0], res_tmp[0], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[1], res_tmp[1], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[2], res_tmp[2], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[3], res_tmp[3], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[4], res_tmp[4], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[5], res_tmp[5], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[6], res_tmp[6], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[7], res_tmp[7], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[8], res_tmp[8], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[9], res_tmp[9], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[10], res_tmp[10], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[11], res_tmp[11], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[12], res_tmp[12], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[13], res_tmp[13], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[14], res_tmp[14], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[15], res_tmp[15], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[16], res_tmp[16], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[17], res_tmp[17], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[18], res_tmp[18], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[19], res_tmp[19], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[20], res_tmp[20], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[21], res_tmp[21], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[22], res_tmp[22], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[23], res_tmp[23], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[24], res_tmp[24], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[25], res_tmp[25], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[26], res_tmp[26], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[27], res_tmp[27], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[28], res_tmp[28], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[29], res_tmp[29], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[30], res_tmp[30], weights, biases);
-    pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[31], res_tmp[31], weights, biases);
-
-    for(int jj = 0; jj < 32; jj++) {
-        for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/32; ii++) {
-            #pragma HLS UNROLL
-            res[jj*CONFIG_T::out_width*CONFIG_T::n_filt/32+ii] = res_tmp[jj][ii];
+            res[ii*CONFIG_T::reuse_factor+jj] = res_tmp[jj][ii];
         }
     }
 }
