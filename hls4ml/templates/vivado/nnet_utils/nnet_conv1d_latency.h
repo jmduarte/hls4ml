@@ -206,7 +206,7 @@ template<class data_T, class res_T, typename CONFIG_T> void pointwise_conv_1d_la
     for(int jj = 0; jj < CONFIG_T::reuse_factor; jj++) {
         for(int ii = 0; ii < CONFIG_T::in_width*CONFIG_T::n_chan/CONFIG_T::reuse_factor; ii++) {
             #pragma HLS UNROLL
-            data_tmp[jj][ii] = data[ii*CONFIG_T::reuse_factor+jj];
+            data_tmp[jj][ii] = data[jj*CONFIG_T::in_width*CONFIG_T::n_chan/CONFIG_T::reuse_factor+ii];
         }
     }
 
@@ -246,7 +246,7 @@ template<class data_T, class res_T, typename CONFIG_T> void pointwise_conv_1d_la
     for(int jj = 0; jj < CONFIG_T::reuse_factor; jj++) {
         for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/CONFIG_T::reuse_factor; ii++) {
             #pragma HLS UNROLL
-            res[ii*CONFIG_T::reuse_factor+jj] = res_tmp[jj][ii];
+            res[jj*CONFIG_T::out_width * CONFIG_T::n_filt/CONFIG_T::reuse_factor + ii] = res_tmp[jj][ii];
         }
     }
 }
