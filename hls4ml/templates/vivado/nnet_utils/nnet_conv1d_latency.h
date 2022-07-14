@@ -242,7 +242,15 @@ template<class data_T, class res_T, typename CONFIG_T> void pointwise_conv_1d_la
     if (CONFIG_T::reuse_factor > 29) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[29], res_tmp[29], weights, biases);
     if (CONFIG_T::reuse_factor > 30) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[30], res_tmp[30], weights, biases);
     if (CONFIG_T::reuse_factor > 31) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[31], res_tmp[31], weights, biases);
-
+    if (CONFIG_T::reuse_factor > 32) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[32], res_tmp[32], weights, biases);
+    if (CONFIG_T::reuse_factor > 33) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[33], res_tmp[33], weights, biases);
+    if (CONFIG_T::reuse_factor > 34) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[34], res_tmp[34], weights, biases);
+    if (CONFIG_T::reuse_factor > 35) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[35], res_tmp[35], weights, biases);
+    if (CONFIG_T::reuse_factor > 36) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[36], res_tmp[36], weights, biases);
+    if (CONFIG_T::reuse_factor > 37) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[37], res_tmp[37], weights, biases);
+    if (CONFIG_T::reuse_factor > 38) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[38], res_tmp[38], weights, biases);
+    if (CONFIG_T::reuse_factor > 39) pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[39], res_tmp[39], weights, biases);
+ 
     for(int jj = 0; jj < CONFIG_T::reuse_factor; jj++) {
         for(int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt/CONFIG_T::reuse_factor; ii++) {
             #pragma HLS UNROLL

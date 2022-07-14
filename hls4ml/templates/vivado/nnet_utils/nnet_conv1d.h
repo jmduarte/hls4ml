@@ -75,7 +75,7 @@ void pointwise_conv_1d_cl(
     assert(CONFIG_T::filt_width == 1);
 
     if (CONFIG_T::strategy == nnet::latency) {
-        if (CONFIG_T::reuse_factor > 1 && CONFIG_T::reuse_factor <= 32) {
+        if (CONFIG_T::reuse_factor > 1 && CONFIG_T::reuse_factor <= 40) {
             pointwise_conv_1d_latency_cl_split_by_rf<data_T, res_T, CONFIG_T>(data, res, weights, biases);
       }
         else {
