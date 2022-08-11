@@ -1,14 +1,15 @@
 on: pull_request
 name: Update local branch on PR
 jobs:
-  updateBranch:
-    name: Update local branch on PR
+  build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - uses: Embraser01/update-git-branch-action@v1.0.0
-      if: github.ref == 'refs/heads/master'
+    - uses: actions/checkout@v2
       with:
+        persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal access token.
+        fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: 'pr/${{ github.event.pull_request.number }}'
-        force: 1
-        githubToken: ${{ secrets.GITHUB_TOKEN }}
