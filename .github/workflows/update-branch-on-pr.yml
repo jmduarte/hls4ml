@@ -1,0 +1,14 @@
+on: pull_request
+name: Update local branch on PR
+jobs:
+  updateBranch:
+    name: Update local branch on PR
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: Embraser01/update-git-branch-action@v1.0.0
+      if: github.ref == 'refs/heads/master'
+      with:
+        branch: 'pr/${{ github.event.pull_request.number }}'
+        force: 1
+        githubToken: ${{ secrets.GITHUB_TOKEN }}
