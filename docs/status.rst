@@ -13,7 +13,7 @@ Features
 
 A list of supported ML codes and architectures, including a summary table is below.  Dependencies are given in the :doc:`Setup <setup>` page.
 
-ML code support: 
+ML code support:
 
 * Keras/Tensorflow/QKeras, PyTorch, Onnx
 
@@ -39,7 +39,7 @@ A summary of the on-going status of the ``hls4ml`` tool is in the table below.
    * - Conv1D/Conv2D
      - ``supported``
      - ``in development``
-     - ``in development`` 
+     - ``in development``
    * - RNN/LSTM
      - ``in development``
      - ``in development``
@@ -56,4 +56,3 @@ Example Models
 ==============
 
 We also provide and documented several example models that have been implemented in ``hls4ml`` in `this Github repository <https://github.com/fastmachinelearning/example-models>`_.
-

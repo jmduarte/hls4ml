@@ -1,7 +1,10 @@
-
+from hls4ml.backends.fpga.fpga_types import (APTypeConverter, HLSTypeConverter,
+                                             StaticWeightVariableConverter,
+                                             VivadoArrayVariableConverter,
+                                             VivadoInplaceVariableConverter,
+                                             VivadoStreamVariableConverter)
 from hls4ml.model.optimizer import GlobalOptimizerPass
 from hls4ml.model.types import InplaceVariable
-from hls4ml.backends.fpga.fpga_types import APTypeConverter, HLSTypeConverter, StaticWeightVariableConverter, VivadoArrayVariableConverter, VivadoInplaceVariableConverter, VivadoStreamVariableConverter
 
 
 class TransformTypes(GlobalOptimizerPass):
@@ -26,7 +29,7 @@ class TransformTypes(GlobalOptimizerPass):
                 else:
                     new_var = self.array_var_converter.convert(var, pragma='partition')
             else:
-                raise Exception('Unknown IOType {} in {} ({})'.format(io_type, node.name, node.__class__.__name__))
+                raise Exception(f'Unknown IOType {io_type} in {node.name} ({node.__class__.__name__})')
 
             node.set_attr(out_name, new_var)
 

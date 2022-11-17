@@ -1,12 +1,12 @@
-from __future__ import print_function
 import os
 import re
 import sys
 import xml.etree.ElementTree as ET
 
+
 def read_vivado_report(hls_dir, full_report=False):
     if not os.path.exists(hls_dir):
-        print('Path {} does not exist. Exiting.'.format(hls_dir))
+        print(f'Path {hls_dir} does not exist. Exiting.')
         return
 
     prj_dir = None
@@ -21,15 +21,16 @@ def read_vivado_report(hls_dir, full_report=False):
 
     sln_dir = hls_dir + '/' + prj_dir
     if not os.path.exists(sln_dir):
-        print('Project {} does not exist. Rerun "hls4ml build -p {}".'.format(prj_dir, hls_dir))
+        print(f'Project {prj_dir} does not exist. Rerun "hls4ml build -p {hls_dir}".')
         return
 
     solutions = _find_solutions(sln_dir)
-    print('Found {} solution(s) in {}.'.format(len(solutions), sln_dir))
+    print(f'Found {len(solutions)} solution(s) in {sln_dir}.')
 
     for sln in solutions:
-        print('Reports for solution "{}":\n'.format(sln))
+        print(f'Reports for solution "{sln}":\n')
         _find_reports(sln_dir + '/' + sln, top_func_name, full_report)
+
 
 def _parse_project_script(path):
     prj_dir = None
@@ -37,13 +38,14 @@ def _parse_project_script(path):
 
     project_path = path + '/project.tcl'
 
-    with open(project_path, 'r') as f:
+    with open(project_path) as f:
         for line in f.readlines():
             if 'set project_name' in line:
                 top_func_name = line.split('"')[-2]
                 prj_dir = top_func_name + '_prj'
 
     return prj_dir, top_func_name
+
 
 def _find_solutions(sln_dir):
     solutions = []
@@ -61,49 +63,55 @@ def _find_solutions(sln_dir):
 
     return solutions
 
+
 def _find_reports(sln_dir, top_func_name, full_report=False):
-    csim_file = sln_dir + '/csim/report/{}_csim.log'.format(top_func_name)
+    csim_file = sln_dir + f'/csim/report/{top_func_name}_csim.log'
     if os.path.isfile(csim_file):
         _show_csim_report(csim_file)
     else:
         print('C simulation report not found.')
 
-    syn_file = sln_dir + '/syn/report/{}_csynth.rpt'.format(top_func_name)
+    syn_file = sln_dir + f'/syn/report/{top_func_name}_csynth.rpt'
     if os.path.isfile(syn_file):
         _show_synth_report(syn_file, full_report)
     else:
         print('Synthesis report not found.')
 
-    cosim_file = sln_dir + '/sim/report/{}_cosim.rpt'.format(top_func_name)
+    cosim_file = sln_dir + f'/sim/report/{top_func_name}_cosim.rpt'
     if os.path.isfile(cosim_file):
         _show_cosim_report(cosim_file)
     else:
         print('Co-simulation report not found.')
 
+
 def _show_csim_report(csim_file):
-    with open(csim_file, 'r') as f:
+    with open(csim_file) as f:
         print('C SIMULATION RESULT:')
         print(f.read())
 
+
 def _show_synth_report(synth_file, full_report=False):
-    with open(synth_file, 'r') as f:
+    with open(synth_file) as f:
         print('SYNTHESIS REPORT:')
         for line in f.readlines()[2:]:
             if not full_report and '* DSP48' in line:
                 break
-            print(line, end = '')
+            print(line, end='')
+
 
 def _show_cosim_report(cosim_file):
-    with open(cosim_file, 'r') as f:
+    with open(cosim_file) as f:
         print('CO-SIMULATION RESULT:')
         print(f.read())
+
 
 def _get_abs_and_percentage_values(unparsed_cell):
     return int(unparsed_cell.split('(')[0]), float(unparsed_cell.split('(')[1].replace('%', '').replace(')', ''))
 
+
 def parse_vivado_report(hls_dir):
     if not os.path.exists(hls_dir):
-        print('Path {} does not exist. Exiting.'.format(hls_dir))
+        print(f'Path {hls_dir} does not exist. Exiting.')
         return
 
     prj_dir = None
@@ -118,19 +126,19 @@ def parse_vivado_report(hls_dir):
 
     sln_dir = hls_dir + '/' + prj_dir
     if not os.path.exists(sln_dir):
-        print('Project {} does not exist. Rerun "hls4ml build -p {}".'.format(prj_dir, hls_dir))
+        print(f'Project {prj_dir} does not exist. Rerun "hls4ml build -p {hls_dir}".')
         return
 
     solutions = _find_solutions(sln_dir)
     if len(solutions) > 1:
-        print('WARNING: Found {} solution(s) in {}. Using the first solution.'.format(len(solutions), sln_dir))
+        print(f'WARNING: Found {len(solutions)} solution(s) in {sln_dir}. Using the first solution.')
 
     report = {}
 
     sim_file = hls_dir + '/tb_data/csim_results.log'
     if os.path.isfile(sim_file):
         csim_results = []
-        with open(sim_file, 'r') as f:
+        with open(sim_file) as f:
             for line in f.readlines():
                 csim_results.append([r for r in line.split()])
         report['CSimResults'] = csim_results
@@ -138,12 +146,12 @@ def parse_vivado_report(hls_dir):
     sim_file = hls_dir + '/tb_data/rtl_cosim_results.log'
     if os.path.isfile(sim_file):
         cosim_results = []
-        with open(sim_file, 'r') as f:
+        with open(sim_file) as f:
             for line in f.readlines():
                 cosim_results.append([r for r in line.split()])
         report['CosimResults'] = cosim_results
 
-    syn_file = sln_dir + '/' + solutions[0] + '/syn/report/{}_csynth.xml'.format(top_func_name)
+    syn_file = sln_dir + '/' + solutions[0] + f'/syn/report/{top_func_name}_csynth.xml'
     c_synth_report = {}
     if os.path.isfile(syn_file):
         root = ET.parse(syn_file).getroot()
@@ -190,13 +198,13 @@ def parse_vivado_report(hls_dir):
     else:
         print('Vivado synthesis report not found.')
 
-    cosim_file = sln_dir + '/' + solutions[0] + '/sim/report/{}_cosim.rpt'.format(top_func_name)
+    cosim_file = sln_dir + '/' + solutions[0] + f'/sim/report/{top_func_name}_cosim.rpt'
     if os.path.isfile(cosim_file):
         cosim_report = {}
-        with open(cosim_file, 'r') as f:
+        with open(cosim_file) as f:
             for line in f.readlines():
                 if re.search('VHDL', line) or re.search('Verilog', line):
-                    result = line[1:].split() # [1:] skips the leading '|'
+                    result = line[1:].split()  # [1:] skips the leading '|'
                     result = [res[:-1] if res[-1] == '|' else res for res in result]
                     # RTL, Status, Latency-min, Latency-avg, Latency-max, Interval-min, Interval-avg, Interval-max
                     if result[1] == 'NA':
@@ -213,27 +221,58 @@ def parse_vivado_report(hls_dir):
         print('Cosim report not found.')
 
     if os.path.isfile(cosim_file):
-        transaction_file = sln_dir + '/' + solutions[0] + '/sim/' + report['CosimReport']['RTL'].lower() + '/' + top_func_name + '.performance.result.transaction.xml'
+        transaction_file = (
+            sln_dir
+            + '/'
+            + solutions[0]
+            + '/sim/'
+            + report['CosimReport']['RTL'].lower()
+            + '/'
+            + top_func_name
+            + '.performance.result.transaction.xml'
+        )
         if os.path.isfile(transaction_file):
-            cosim_transactions = {'InitiationInterval': {'max': 0, 'min': sys.maxsize, 'avg': 0.0},
-                                  'Latency': {'max': 0, 'min': sys.maxsize, 'avg': 0.0}}
-            with open(transaction_file, 'r') as f:
+            cosim_transactions = {
+                'InitiationInterval': {'max': 0, 'min': sys.maxsize, 'avg': 0.0},
+                'Latency': {'max': 0, 'min': sys.maxsize, 'avg': 0.0},
+            }
+            with open(transaction_file) as f:
                 i = 1
                 for line in f.readlines():
                     if re.search('transaction', line):
                         result = line.split()
                         # update min
                         if result[3] != 'x':
-                            cosim_transactions['InitiationInterval']['min'] = int(result[3]) if int(result[3]) < cosim_transactions['InitiationInterval']['min'] else cosim_transactions['InitiationInterval']['min']
-                        cosim_transactions['Latency']['min'] = int(result[2]) if int(result[2]) < cosim_transactions['Latency']['min'] else cosim_transactions['Latency']['min']
+                            cosim_transactions['InitiationInterval']['min'] = (
+                                int(result[3])
+                                if int(result[3]) < cosim_transactions['InitiationInterval']['min']
+                                else cosim_transactions['InitiationInterval']['min']
+                            )
+                        cosim_transactions['Latency']['min'] = (
+                            int(result[2])
+                            if int(result[2]) < cosim_transactions['Latency']['min']
+                            else cosim_transactions['Latency']['min']
+                        )
                         # update max
                         if result[3] != 'x':
-                            cosim_transactions['InitiationInterval']['max'] = int(result[3]) if int(result[3]) > cosim_transactions['InitiationInterval']['max'] else cosim_transactions['InitiationInterval']['max']
-                        cosim_transactions['Latency']['max'] = int(result[2]) if int(result[2]) > cosim_transactions['Latency']['max'] else cosim_transactions['Latency']['max']
+                            cosim_transactions['InitiationInterval']['max'] = (
+                                int(result[3])
+                                if int(result[3]) > cosim_transactions['InitiationInterval']['max']
+                                else cosim_transactions['InitiationInterval']['max']
+                            )
+                        cosim_transactions['Latency']['max'] = (
+                            int(result[2])
+                            if int(result[2]) > cosim_transactions['Latency']['max']
+                            else cosim_transactions['Latency']['max']
+                        )
                         # update avg
                         if result[3] != 'x':
-                            cosim_transactions['InitiationInterval']['avg'] = cosim_transactions['InitiationInterval']['avg'] + float((int(result[3]) - cosim_transactions['InitiationInterval']['avg']) / i)
-                        cosim_transactions['Latency']['avg'] = cosim_transactions['Latency']['avg'] + float((int(result[2]) - cosim_transactions['Latency']['avg']) / i)
+                            cosim_transactions['InitiationInterval']['avg'] = cosim_transactions['InitiationInterval'][
+                                'avg'
+                            ] + float((int(result[3]) - cosim_transactions['InitiationInterval']['avg']) / i)
+                        cosim_transactions['Latency']['avg'] = cosim_transactions['Latency']['avg'] + float(
+                            (int(result[2]) - cosim_transactions['Latency']['avg']) / i
+                        )
                         i += 1
 
             report['CosimReport']['LatencyMin'] = cosim_transactions['Latency']['min']
@@ -247,9 +286,9 @@ def parse_vivado_report(hls_dir):
         util_rpt_file = hls_dir + '/util.rpt'
         if os.path.isfile(util_rpt_file):
             implementation_report = {}
-            with open(util_rpt_file, 'r') as f:
+            with open(util_rpt_file) as f:
                 for line in f.readlines():
-                    if re.search('\(top\)', line):
+                    if re.search(r'\(top\)', line):
                         # Total LUTs  |   Logic LUTs  |   LUTRAMs  |     SRLs    |      FFs      |    RAMB36   |   RAMB18  (|   URAM   )| DSP48 Blocks
                         # skipping the first 2 unuseful cells with [:2]
                         results = [_get_abs_and_percentage_values(elem) for elem in line.replace('|', '').split()[2:]]
@@ -287,20 +326,25 @@ def parse_vivado_report(hls_dir):
         else:
             print('Implementation report not found.')
 
-    timing_report_file = hls_dir + '/' + prj_dir.split('_')[0] + '_vivado_accelerator/project_1.runs/impl_1/design_1_wrapper_timing_summary_routed.rpt'
+    timing_report_file = (
+        hls_dir
+        + '/'
+        + prj_dir.split('_')[0]
+        + '_vivado_accelerator/project_1.runs/impl_1/design_1_wrapper_timing_summary_routed.rpt'
+    )
     if os.path.isfile(timing_report_file):
         timing_report = {}
-        with open(timing_report_file, 'r') as f:
+        with open(timing_report_file) as f:
             while not re.search('WNS', next(f)):
                 pass
             # skip the successive line
             next(f)
             result = next(f).split()
 
-        timing_report['WNS']  = float(result[0])
-        timing_report['TNS']  = float(result[1])
-        timing_report['WHS']  = float(result[4])
-        timing_report['THS']  = float(result[5])
+        timing_report['WNS'] = float(result[0])
+        timing_report['TNS'] = float(result[1])
+        timing_report['WHS'] = float(result[4])
+        timing_report['THS'] = float(result[5])
         timing_report['WPWS'] = float(result[8])
         timing_report['TPWS'] = float(result[9])
 
@@ -308,4 +352,3 @@ def parse_vivado_report(hls_dir):
     else:
         print('Timing report not found.')
     return report
-

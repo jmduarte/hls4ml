@@ -7,18 +7,18 @@ This chapter is dedicated to setting up the tool.  We discuss software dependenc
 Dependencies
 ============
 
-**numpy, h5py**\ : required for the translation of keras model files 
+**numpy, h5py**\ : required for the translation of keras model files
 
 http://www.numpy.org
 
-http://www.h5py.org 
+http://www.h5py.org
 
 
-**pyyaml**\ : for configuration file parsing 
+**pyyaml**\ : for configuration file parsing
 
-https://pypi.python.org/pypi/PyYAML 
+https://pypi.python.org/pypi/PyYAML
 
-**QKeras**\ : for working with quantized models 
+**QKeras**\ : for working with quantized models
 
 https://github.com/google/qkeras
 
@@ -27,9 +27,9 @@ https://github.com/google/qkeras
 https://pytorch.org/
 
 
-**onnx**\ : note that you need an install of protobuf and numpy to build onnx. Detailed instructions are included in the link. 
+**onnx**\ : note that you need an install of protobuf and numpy to build onnx. Detailed instructions are included in the link.
 
-https://github.com/onnx/onnx 
+https://github.com/onnx/onnx
 
 
 **Xilinx Vivado license**\ : a license is required for the synthesis of generated RTL IP
@@ -38,7 +38,7 @@ https://github.com/onnx/onnx
 Quick Start
 =============
 
-For basic concepts to understand the tool, please visit the :doc:`Concepts <concepts>` chapter. Here we give line-by-line instructions for simply running the tool out-of-the-box and getting a feel for the workflow.  
+For basic concepts to understand the tool, please visit the :doc:`Concepts <concepts>` chapter. Here we give line-by-line instructions for simply running the tool out-of-the-box and getting a feel for the workflow.
 
 Installation
 ------------
@@ -87,7 +87,7 @@ After that, you can use :code:`Vivado HLS` to synthesize the model:
 
 Done! You've built your first project using ``hls4ml`` ! To learn more about our various API functionalities, check out our tutorials `here <https://github.com/fastmachinelearning/hls4ml-tutorial>`__.
 
-If you want to configure your model further, check out our :doc:`Configuration <api/configuration>` page. 
+If you want to configure your model further, check out our :doc:`Configuration <api/configuration>` page.
 
 Apart from our main API, we also support model conversion using a command line interface, check out our next section to find out more:
 
@@ -106,7 +106,7 @@ Further information about ``.yml`` files can be found in :doc:`Configuration <ap
 In order to create an example HLS project:
 
 
-Go to ``example-models/`` from the main directory: 
+Go to ``example-models/`` from the main directory:
 
 .. code-block:: bash
 
@@ -147,19 +147,19 @@ Further help
 ^^^^^^^^^^^^^^^^
 
 
-* 
+*
   For further information about how to use ``hls4ml``\ , do: ``hls4ml --help`` or ``hls4ml -h``
 
-* 
+*
   If you need help for a particular ``command``\ , ``hls4ml command -h`` will show help for the requested ``command``
 
-* 
+*
   We provide a detailed documentation for each of the command in the :doc:`Command Help <../command>` section
 
 Uninstalling
 ^^^^^^^^^^^^^^
 
-To uninstall ``hls4ml``: 
+To uninstall ``hls4ml``:
 
 .. code-block:: bash
 
@@ -169,11 +169,11 @@ Existing examples
 -----------------
 
 
-* 
+*
   Examples of model files and weights can be found in `example_models <https://github.com/fastmachinelearning/example-models>`_ directory.
 
-* 
+*
   Training codes and examples of resources needed to train the models can be found `here <https://github.com/fastmachinelearning/keras-training>`__.
 
-* 
+*
   Other examples of various HLS projects with examples of different machine learning algorithm implementations are in the directory `example-prjs <https://github.com/fastmachinelearning/hls4ml/tree/master/example-prjs>`_.

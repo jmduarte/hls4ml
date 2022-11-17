@@ -1,7 +1,10 @@
-
+from hls4ml.backends.fpga.fpga_types import (
+    ACTypeConverter, HLSTypeConverter, QuartusArrayVariableConverter,
+    QuartusInplaceVariableConverter, QuartusStreamVariableConverter,
+    QuartusStructMemberVariableConverter, StaticWeightVariableConverter)
 from hls4ml.model.optimizer import GlobalOptimizerPass
 from hls4ml.model.types import InplaceVariable
-from hls4ml.backends.fpga.fpga_types import ACTypeConverter, QuartusArrayVariableConverter, HLSTypeConverter, QuartusInplaceVariableConverter, QuartusStreamVariableConverter, QuartusStructMemberVariableConverter, StaticWeightVariableConverter
+
 
 class TransformTypes(GlobalOptimizerPass):
     def __init__(self):
@@ -28,7 +31,7 @@ class TransformTypes(GlobalOptimizerPass):
                 else:
                     new_var = self.array_var_converter.convert(var, pragma='hls_register')
             else:
-                raise Exception('Unknown IOType {} in {} ({})'.format(io_type, node.name, node.class_name))
+                raise Exception(f'Unknown IOType {io_type} in {node.name} ({node.class_name})')
 
             node.set_attr(out_name, new_var)
 

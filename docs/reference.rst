@@ -9,14 +9,14 @@ Citation
 If you are using the package please cite:
 
 
-* 
+*
   .. image:: https://zenodo.org/badge/108329371.svg
      :target: https://zenodo.org/badge/latestdoi/108329371
      :alt: DOI
 
 * J. Duarte *et al.*\ , "Fast inference of deep neural networks in FPGAs for particle physics", `JINST 13 P07027 (2018) <https://dx.doi.org/10.1088/1748-0221/13/07/P07027>`_\ , `arXiv:1804.06913 <https://arxiv.org/abs/1804.06913>`_.
 
-If you are using the boosted decision tree implementation, please cite also:   
+If you are using the boosted decision tree implementation, please cite also:
 
 
 * S. Summers *et al.*\ , "Fast inference of boosted decision trees in FPGAs for particle physics", `arXiv:2002.02534 <https://arxiv.org/abs/2002.02534>`_.
@@ -34,7 +34,7 @@ Additional Talks and Presentations
 * CHEP 2018: `talk <https://indico.cern.ch/event/587955/contributions/2937529/>`__
 * Connecting the Dots 2018: `talk <https://indico.cern.ch/event/658267/contributions/2813688/>`__
 * Fermilab Research Techniques Seminar: `talk <https://indico.fnal.gov/event/16908/>`__
-* CERN EP/IT Data Science Seminar: `talk <https://indico.cern.ch/event/721567/>`__ 
+* CERN EP/IT Data Science Seminar: `talk <https://indico.cern.ch/event/721567/>`__
 
 Contributors
 ============
@@ -51,4 +51,3 @@ Contributors
 * Giuseppe Di Guglielmo [Columbia University]
 * Duc Hoang [Rhodes College]
 * Noah Paladino [Rutgers University]
-

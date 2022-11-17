@@ -1,8 +1,10 @@
 from collections.abc import MutableMapping
 
-from hls4ml.model.types import InplaceVariable, NamedType, TensorVariable, WeightVariable, Source
+from hls4ml.model.types import (InplaceVariable, NamedType, Source,
+                                TensorVariable, WeightVariable)
 
-class Attribute(object):
+
+class Attribute:
     def __init__(self, name, value_type=int, default=None, configurable=False):
         self.name = name
         self.value_type = value_type
@@ -13,36 +15,42 @@ class Attribute(object):
         if self.value_type is not None:
             return issubclass(type(value), self.value_type)
         else:
-            return True # Meaning we don't care
+            return True  # Meaning we don't care
+
 
 class TypeAttribute(Attribute):
     def __init__(self, name, default=None, configurable=True):
         if not name.endswith('_t'):
             name += '_t'
-        super(TypeAttribute, self).__init__(name, value_type=NamedType, default=default, configurable=configurable)
+        super().__init__(name, value_type=NamedType, default=default, configurable=configurable)
+
 
 class ChoiceAttribute(Attribute):
     def __init__(self, name, choices, default=None, configurable=True):
-        super(ChoiceAttribute, self).__init__(name, value_type=list, default=default, configurable=configurable)
-        assert(len(choices) > 0)
+        super().__init__(name, value_type=list, default=default, configurable=configurable)
+        assert len(choices) > 0
         if default is not None:
-            assert(default in choices)
+            assert default in choices
         self.choices = choices
 
     def validate_value(self, value):
         return value in self.choices
 
+
 class VariableAttribute(Attribute):
     def __init__(self, name):
-        super(VariableAttribute, self).__init__(name, value_type=WeightVariable, default=None, configurable=False)
+        super().__init__(name, value_type=WeightVariable, default=None, configurable=False)
+
 
 class WeightAttribute(Attribute):
     def __init__(self, name):
-        super(WeightAttribute, self).__init__(name, value_type=WeightVariable, default=None, configurable=False)
+        super().__init__(name, value_type=WeightVariable, default=None, configurable=False)
+
 
 class CodeAttrubute(Attribute):
     def __init__(self, name):
         super(WeightAttribute, self).__init__(name, value_type=Source, default=None, configurable=False)
+
 
 class AttributeDict(MutableMapping):
     def __init__(self, layer):
@@ -57,8 +65,7 @@ class AttributeDict(MutableMapping):
         return len(self.attributes)
 
     def __iter__(self):
-        for key in self.attributes.keys():
-            yield key
+        yield from self.attributes.keys()
 
     def __setitem__(self, key, value):
         if isinstance(value, (TensorVariable, InplaceVariable)):
@@ -74,6 +81,7 @@ class AttributeDict(MutableMapping):
     def __delitem__(self, key):
         self.attributes.remove(key)
 
+
 class AttributeMapping(MutableMapping):
     def __init__(self, attributes, clazz):
         self.attributes = attributes
@@ -87,8 +95,7 @@ class AttributeMapping(MutableMapping):
 
     def __iter__(self):
         precision_keys = [k for k, v in self.attributes.items() if isinstance(v, self.clazz)]
-        for key in precision_keys:
-            yield key
+        yield from precision_keys
 
     def __setitem__(self, key, value):
         self.attributes[key] = value
@@ -96,9 +103,11 @@ class AttributeMapping(MutableMapping):
     def __delitem__(self, key):
         self.attributes.remove(key)
 
+
 class WeightMapping(AttributeMapping):
     def __init__(self, attributes):
         super().__init__(attributes, WeightVariable)
+
 
 class VariableMapping(AttributeMapping):
     def __init__(self, attributes):
@@ -114,14 +123,16 @@ class VariableMapping(AttributeMapping):
         precision_keys = [k for k, v in self.attributes.items() if isinstance(v, self.clazz)]
         for key in precision_keys:
             if key.startswith('out_'):
-                yield key[len('out_'):]
+                yield key[len('out_') :]
             else:
                 yield key
         super().__iter__()
 
+
 class TypeMapping(AttributeMapping):
     def __init__(self, attributes):
         super().__init__(attributes, NamedType)
+
 
 class CodeMapping(AttributeMapping):
     def __init__(self, attributes):

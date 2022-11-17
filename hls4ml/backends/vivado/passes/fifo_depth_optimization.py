@@ -2,7 +2,8 @@ import json
 
 from pyDigitalWaveTools.vcd.parser import VcdParser
 
-from hls4ml.model.optimizer.optimizer import ConfigurableOptimizerPass, ModelOptimizerPass
+from hls4ml.model.optimizer.optimizer import (ConfigurableOptimizerPass,
+                                              ModelOptimizerPass)
 
 
 def populate_values(values, name, data, depth):
@@ -21,11 +22,15 @@ def set_big_fifos(vars_to_profile, profiling_fifo_depth):
 
 def get_vcd_data(model):
     model.write()
-    model.build(reset=False, csim=True, synth=True, cosim=True, validation=False, export=False, vsynth=False,
-                fifo_opt=True)
+    model.build(reset=False, csim=True, synth=True, cosim=True, validation=False, export=False, vsynth=False, fifo_opt=True)
 
     with open(
-            model.config.get_output_dir() + '/' + model.config.get_project_name() + '_prj' + '/solution1/sim/verilog/fifo_opt.vcd') as vcd_file:
+        model.config.get_output_dir()
+        + '/'
+        + model.config.get_project_name()
+        + '_prj'
+        + '/solution1/sim/verilog/fifo_opt.vcd'
+    ) as vcd_file:
         vcd = VcdParser()
         vcd.parse(vcd_file)
         data = vcd.scope.toJson()
@@ -62,15 +67,20 @@ class FifoDepthOptimization(ConfigurableOptimizerPass, ModelOptimizerPass):
         # initialize all the fifos to `profiling_fifo_depth` so that they will be automatically implemented in BRAMs
         # and so they will be profiled
         if profiling_fifo_depth:
-            vars_to_profile = {k: v for k, v in model.output_vars.items() if v != model.get_output_variables()[0] and
-                               v != model.get_input_variables()[0]}
+            vars_to_profile = {
+                k: v
+                for k, v in model.output_vars.items()
+                if v != model.get_output_variables()[0] and v != model.get_input_variables()[0]
+            }
 
             set_big_fifos(vars_to_profile, profiling_fifo_depth)
 
         data = get_vcd_data(model)
 
         if len(data['children']) == 0:
-            print("FIFO depth optimization found no FIFOs implemented using BRAMs in the design, no optimization is possible. Consider increasing profiling_fifo_depth.")
+            print(
+                "FIFO depth optimization found no FIFOs implemented using BRAMs in the design, no optimization is possible. Consider increasing profiling_fifo_depth."
+            )
             return False
 
         n_elem = len(data['children'][0]['children'][0]['children'])

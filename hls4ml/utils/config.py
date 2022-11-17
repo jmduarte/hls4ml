@@ -1,14 +1,13 @@
-from __future__ import print_function
 import json
 
 import hls4ml
 
-def create_config(output_dir='my-hls-test', project_name='myproject',
-    backend='Vivado', **kwargs):
+
+def create_config(output_dir='my-hls-test', project_name='myproject', backend='Vivado', **kwargs):
 
     backend_list = hls4ml.backends.get_available_backends()
     if backend.lower() not in backend_list:
-        raise Exception('Unknown backend: {}'.format(backend))
+        raise Exception(f'Unknown backend: {backend}')
 
     backend = hls4ml.backends.get_backend(backend)
 
@@ -22,8 +21,10 @@ def create_config(output_dir='my-hls-test', project_name='myproject',
 
     return config
 
+
 def _get_precision_from_quantizer(quantizer):
     import qkeras
+
     if isinstance(quantizer, str):
         quantizer_obj = qkeras.get_quantizer(quantizer)
         quantizer = {}
@@ -32,7 +33,7 @@ def _get_precision_from_quantizer(quantizer):
             quantizer['class_name'] = quantizer_obj.__class__.__name__
             quantizer['config'] = quantizer_obj.get_config()
         # Some activations are just functions
-        else: 
+        else:
             quantizer['class_name'] = quantizer_obj.__name__
 
     supported_quantizers = ['quantized_bits', 'quantized_relu', 'quantized_tanh', 'quantized_po2', 'quantized_relu_po2']
@@ -40,14 +41,14 @@ def _get_precision_from_quantizer(quantizer):
     if quantizer['class_name'] in supported_quantizers:
         bits = int(quantizer['config']['bits'])
         # if integer isn't specified, it should be the same as bits
-        integer = int(quantizer['config'].get('integer', bits-1)) + 1
+        integer = int(quantizer['config'].get('integer', bits - 1)) + 1
         if quantizer['class_name'] == 'quantized_relu':
             signed = False
             integer -= 1
     elif quantizer['class_name'] in ['binary', 'stochastic_binary', 'binary_tanh']:
         bits = 2
         integer = 2
-    
+
     elif quantizer['class_name'] in ['ternary', 'stochastic_ternary', 'ternary_tanh']:
         bits = 2
         integer = 2
@@ -57,9 +58,10 @@ def _get_precision_from_quantizer(quantizer):
     decimal = bits - integer
     signed = '' if signed else 'u'
     if decimal > 0:
-        return 'ap_{}fixed<{},{}>'.format(signed, bits, integer)
+        return f'ap_{signed}fixed<{bits},{integer}>'
     else:
-        return 'ap_{}int<{}>'.format(signed, bits)
+        return f'ap_{signed}int<{bits}>'
+
 
 def config_from_keras_model(model, granularity='model', default_precision='ap_fixed<16,6>', default_reuse_factor=1):
     """Create an HLS conversion config given the Keras model.
@@ -89,9 +91,11 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
         [dict]: The created config.
     """
     if granularity.lower() not in ['model', 'type', 'name']:
-        raise Exception('Invalid configuration granularity specified, expected "model", "type" or "name" got "{}"'.format(granularity))
+        raise Exception(
+            f'Invalid configuration granularity specified, expected "model", "type" or "name" got "{granularity}"'
+        )
 
-    #This is a list of dictionaries to hold all the layer info we need to generate HLS
+    # This is a list of dictionaries to hold all the layer info we need to generate HLS
     layer_list = []
 
     if isinstance(model, dict):
@@ -99,11 +103,20 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
     else:
         model_arch = json.loads(model.to_json())
 
-    #Define supported layers
+    # Define supported layers
     core_layers = ['InputLayer', 'Dropout', 'Flatten', 'Reshape', 'Permute', 'Embedding']
     dense_layers = ['Dense', 'BinaryDense', 'TernaryDense']
     conv_layers = ['Conv1D', 'Conv2D', 'BinaryConv2D', 'SeparableConv2D']
-    pooling_layers = ['MaxPooling1D', 'MaxPooling2D', 'GlobalMaxPooling1D', 'GlobalMaxPooling2D', 'AveragePooling1D', 'AveragePooling2D', 'GlobalAveragePooling1D', 'GlobalAveragePooling2D']
+    pooling_layers = [
+        'MaxPooling1D',
+        'MaxPooling2D',
+        'GlobalMaxPooling1D',
+        'GlobalMaxPooling2D',
+        'AveragePooling1D',
+        'AveragePooling2D',
+        'GlobalAveragePooling1D',
+        'GlobalAveragePooling2D',
+    ]
     norm_layers = ['BatchNormalization']
     activation_layers = ['Activation', 'LeakyReLU', 'ThresholdedReLU', 'ELU', 'PReLU', 'Softmax', 'ReLU']
     merge_layers = ['Add', 'Subtract', 'Multiply', 'Average', 'Maximum', 'Minimum', 'Concatenate', 'Dot']
@@ -112,16 +125,30 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
     reshaping_layers = ['ZeroPadding1D', 'ZeroPadding2D']
     graph_layers = ['GarNet', 'GarNetStack']
     rnn_layers = ['SimpleRNN', 'LSTM', 'GRU']
-    #Define layers to skip because they're not configurable or not converted to HLS
+    # Define layers to skip because they're not configurable or not converted to HLS
     skip_layers = ['Dropout', 'Flatten', 'Reshape', 'Permute']
-    #All supported layers
-    supported_layers = core_layers + dense_layers + conv_layers + pooling_layers + norm_layers + activation_layers + merge_layers + qkeras_layers + upsampling_layers + reshaping_layers + graph_layers + rnn_layers + skip_layers
+    # All supported layers
+    supported_layers = (
+        core_layers
+        + dense_layers
+        + conv_layers
+        + pooling_layers
+        + norm_layers
+        + activation_layers
+        + merge_layers
+        + qkeras_layers
+        + upsampling_layers
+        + reshaping_layers
+        + graph_layers
+        + rnn_layers
+        + skip_layers
+    )
 
     keras_layer_config = None
     if model_arch['class_name'] == 'Sequential':
         print('Interpreting Sequential')
         keras_layer_config = model_arch['config']
-        if 'layers' in keras_layer_config: # Newer Keras versions have 'layers' in 'config' key
+        if 'layers' in keras_layer_config:  # Newer Keras versions have 'layers' in 'config' key
             keras_layer_config = keras_layer_config['layers']
         # Sequential doesn't have InputLayer in TF < 2.3 (Keras 2.4.0)
         if keras_layer_config[0]['class_name'] != 'InputLayer':
@@ -140,10 +167,10 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
         if keras_layer['class_name'] in skip_layers:
             continue
 
-        #Dictionary to fill in and append to layer_list
+        # Dictionary to fill in and append to layer_list
         layer = {}
 
-        #Extract name for finding weights and biases
+        # Extract name for finding weights and biases
         layer['name'] = keras_layer['config']['name']
         layer['class_name'] = keras_layer['class_name']
         layer['config'] = keras_layer['config']
@@ -156,7 +183,8 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
             for qname, qclass in layer['config'].items():
                 if 'quantizer' in qname.lower():
                     pname = qname.split('_quantizer')[0]
-                    if pname == 'kernel': pname = 'weight'
+                    if pname == 'kernel':
+                        pname = 'weight'
                     if qclass is not None:
                         precision = _get_precision_from_quantizer(qclass)
                         layer['precision'][pname] = precision
@@ -176,7 +204,7 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
                 layer['n_vertices'] = 128
 
         print('Layer name: {}, layer type: {}'.format(layer['name'], layer['class_name']))
-        layer_list.append( layer )
+        layer_list.append(layer)
         if 'activation' in layer['config'] and layer['class_name'] not in activation_layers:
             act_layer = {}
             act_details = layer['config']['activation']
@@ -212,24 +240,28 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
                 if 'activation' in layer['config'].keys():
                     is_softmax = is_softmax or (layer['config']['activation'] == 'softmax')
             if is_softmax:
-               layer_config['exp_table_t'] = 'ap_fixed<18,8,AP_RND,AP_SAT>'
-               layer_config['inv_table_t'] = 'ap_fixed<18,8,AP_RND,AP_SAT>'
+                layer_config['exp_table_t'] = 'ap_fixed<18,8,AP_RND,AP_SAT>'
+                layer_config['inv_table_t'] = 'ap_fixed<18,8,AP_RND,AP_SAT>'
             else:
                 layer_config['table_t'] = 'ap_fixed<18,8>'
-        
+
         elif layer['class_name'] in norm_layers:
             layer_config['Precision'] = {}
             layer_config['Precision']['scale'] = default_precision
             layer_config['Precision']['bias'] = default_precision
             layer_config['ReuseFactor'] = default_reuse_factor
-        
+
         elif layer['class_name'] in qkeras_layers:
             if 'precision' in layer:
                 layer_config['Precision'] = {}
                 for name, precision in layer['precision'].items():
                     layer_config['Precision'][name] = precision
             else:
-                print('WARNING: Found no precision information in QKeras layer {} ({})'.format(layer['name'], layer['class_name']))
+                print(
+                    'WARNING: Found no precision information in QKeras layer {} ({})'.format(
+                        layer['name'], layer['class_name']
+                    )
+                )
                 layer_config['Precision'] = default_precision
             layer_config['ReuseFactor'] = default_reuse_factor
 
@@ -238,13 +270,14 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
 
             ## Define default precisions for various internal arrays (can be overridden from the config file)
             import math
-            log2_reuse = int(math.log(default_reuse_factor, 2.))
-            n_vertices_width = int(math.log(layer['n_vertices'], 2.))
+
+            log2_reuse = int(math.log(default_reuse_factor, 2.0))
+            n_vertices_width = int(math.log(layer['n_vertices'], 2.0))
 
             # We always give 10 digits for the subintegral part
             fwidth = 10
             # Integral precision for aggr_t depends on how large the temporary sum for weighed feature mean will be
-            aggr_intw = max(log2_reuse, n_vertices_width - log2_reuse) + 3 # safety factor 2**3
+            aggr_intw = max(log2_reuse, n_vertices_width - log2_reuse) + 3  # safety factor 2**3
             aggr_w = aggr_intw + fwidth
             # edge_weight_aggr_t does not need the safety factor
             ew_aggr_intw = aggr_intw - 3
@@ -252,8 +285,8 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
 
             layer_config['Precision'] = {}
             layer_config['Precision']['edge_weight'] = 'ap_ufixed<10,0,AP_TRN,AP_SAT>'
-            layer_config['Precision']['edge_weight_aggr'] = 'ap_ufixed<{},{},AP_TRN,AP_SAT>'.format(ew_aggr_w, ew_aggr_intw)
-            layer_config['Precision']['aggr'] = 'ap_fixed<{},{},AP_TRN,AP_SAT>'.format(aggr_w, aggr_intw)
+            layer_config['Precision']['edge_weight_aggr'] = f'ap_ufixed<{ew_aggr_w},{ew_aggr_intw},AP_TRN,AP_SAT>'
+            layer_config['Precision']['aggr'] = f'ap_fixed<{aggr_w},{aggr_intw},AP_TRN,AP_SAT>'
             layer_config['Precision']['norm'] = 'ap_ufixed<14,4,AP_TRN,AP_SAT>'
 
             layer_config['ReuseFactor'] = default_reuse_factor
@@ -263,16 +296,16 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
 
             dtype = layer['config']['dtype']
             if dtype.startswith('int') or dtype.startswith('uint'):
-                typename = dtype[:dtype.index('int') + 3]
-                width = int(dtype[dtype.index('int') + 3:])
-                layer_config['Precision']['result'] = 'ap_{}<{}>'.format(typename, width)
+                typename = dtype[: dtype.index('int') + 3]
+                width = int(dtype[dtype.index('int') + 3 :])
+                layer_config['Precision']['result'] = f'ap_{typename}<{width}>'
             # elif bool, q[u]int, ...
             else:
                 layer_config['Precision']['result'] = default_precision
 
         else:
             layer_config['Precision'] = default_precision
-        
+
         return layer_config
 
     config = {}
@@ -281,11 +314,11 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
     model_config['Precision'] = default_precision
     model_config['ReuseFactor'] = default_reuse_factor
     model_config['Strategy'] = 'Latency'
-    #model_config['Compression'] = False
-    #model_config['Trace'] = False
+    # model_config['Compression'] = False
+    # model_config['Trace'] = False
 
     config['Model'] = model_config
-    
+
     if granularity.lower() == 'type':
         type_config = {}
         for layer in layer_list:
@@ -293,7 +326,7 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
                 continue
             layer_config = make_layer_config(layer)
             type_config[layer['class_name']] = layer_config
-        
+
         config['LayerType'] = type_config
 
     elif granularity.lower() == 'name':
@@ -301,7 +334,7 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
         for layer in layer_list:
             layer_config = make_layer_config(layer)
             name_config[layer['name']] = layer_config
-        
+
         config['LayerName'] = name_config
 
     return config
@@ -309,7 +342,7 @@ def config_from_keras_model(model, granularity='model', default_precision='ap_fi
 
 def config_from_pytorch_model(model, granularity='model', default_precision='ap_fixed<16,6>', default_reuse_factor=1):
     """Generate configuration dictionary from a Pytorch model.
-    
+
     Parameters
     ----------
     model : Pytorch model object.
@@ -318,22 +351,22 @@ def config_from_pytorch_model(model, granularity='model', default_precision='ap_
         How granular you want the configuration to be.
     default_precision : string, optional
         Defines the precsion of your inputs, outputs, weights and biases.
-        It is denoted by ap_fixed<X,Y>, where Y is the number of bits representing 
+        It is denoted by ap_fixed<X,Y>, where Y is the number of bits representing
         the signed number above the binary point (i.e. the integer part),
-        and X is the total number of bits. Additionally, integers in fixed precision 
-        data type (ap_int<N>, where N is a bit-size from 1 to 1024) can also be used. 
+        and X is the total number of bits. Additionally, integers in fixed precision
+        data type (ap_int<N>, where N is a bit-size from 1 to 1024) can also be used.
     default_reuse_factor : int, optional
         Reuse factor for hls model
-        
+
     Returns
     -------
     config : dict
         configuration dictionary to be used in Pytorch converter.
-        
+
     See Also
     --------
     hls4ml.config_from_keras_model, hls4ml.convert_from_onnx_model
-    
+
     Examples
     --------
     >>> import hls4ml
@@ -341,7 +374,7 @@ def config_from_pytorch_model(model, granularity='model', default_precision='ap_
     >>> hls_model = hls4ml.converters.convert_from_keras_model(model, hls_config=config)
 
     """
-    
+
     config = {}
 
     model_config = {}
@@ -350,13 +383,13 @@ def config_from_pytorch_model(model, granularity='model', default_precision='ap_
     model_config['Strategy'] = 'Latency'
 
     config['Model'] = model_config
-    
+
     return config
 
 
 def config_from_onnx_model(model, granularity='model', default_precision='ap_fixed<16,6>', default_reuse_factor=1):
     """Generate configuration dictionary from an ONNX model.
-    
+
     Parameters
     ----------
     model : ONNX model object.
@@ -365,22 +398,22 @@ def config_from_onnx_model(model, granularity='model', default_precision='ap_fix
         How granular you want the configuration to be.
     default_precision : string, optional
         Defines the precsion of your inputs, outputs, weights and biases.
-        It is denoted by ap_fixed<X,Y>, where Y is the number of bits representing 
+        It is denoted by ap_fixed<X,Y>, where Y is the number of bits representing
         the signed number above the binary point (i.e. the integer part),
-        and X is the total number of bits. Additionally, integers in fixed precision 
-        data type (ap_int<N>, where N is a bit-size from 1 to 1024) can also be used. 
+        and X is the total number of bits. Additionally, integers in fixed precision
+        data type (ap_int<N>, where N is a bit-size from 1 to 1024) can also be used.
     default_reuse_factor : int, optional
         Reuse factor for hls model
-        
+
     Returns
     -------
     config : dict
         configuration dictionary to be used in ONNX converter.
-        
+
     See Also
     --------
     hls4ml.config_from_keras_model, hls4ml.convert_from_pytorch_model
-    
+
     Examples
     --------
     >>> import hls4ml
@@ -388,7 +421,7 @@ def config_from_onnx_model(model, granularity='model', default_precision='ap_fix
     >>> hls_model = hls4ml.converters.convert_from_keras_model(model, hls_config=config)
 
     """
-    
+
     config = {}
 
     model_config = {}
@@ -397,5 +430,5 @@ def config_from_onnx_model(model, granularity='model', default_precision='ap_fix
     model_config['Strategy'] = 'Latency'
 
     config['Model'] = model_config
-    
+
     return config

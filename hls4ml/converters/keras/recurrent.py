@@ -1,15 +1,15 @@
 import numpy as np
 
-from hls4ml.converters.keras_to_hls import parse_default_keras_layer
-from hls4ml.converters.keras_to_hls import keras_handler
-
-from hls4ml.model.types import Quantizer
-from hls4ml.model.types import IntegerPrecisionType
+from hls4ml.converters.keras_to_hls import (keras_handler,
+                                            parse_default_keras_layer)
+from hls4ml.model.types import IntegerPrecisionType, Quantizer
 
 rnn_layers = ['SimpleRNN', 'LSTM', 'GRU']
+
+
 @keras_handler(*rnn_layers)
 def parse_rnn_layer(keras_layer, input_names, input_shapes, data_reader, config):
-    assert(keras_layer['class_name'] in rnn_layers)
+    assert keras_layer['class_name'] in rnn_layers
 
     layer = parse_default_keras_layer(keras_layer, input_names)
 

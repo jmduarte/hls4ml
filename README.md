@@ -21,7 +21,7 @@ Detailed tutorials on how to use `hls4ml`'s various functionalities can be found
 pip install hls4ml
 ```
 
-To install the extra dependencies for profiling: 
+To install the extra dependencies for profiling:
 
 ```
 pip install hls4ml[profiling]

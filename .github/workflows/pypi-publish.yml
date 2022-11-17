@@ -1,5 +1,5 @@
 name: 📦 Packaging release to PyPI
-on: 
+on:
   release:
     types: [released]
 
