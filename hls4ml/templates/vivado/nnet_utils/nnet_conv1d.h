@@ -91,7 +91,7 @@ void pointwise_conv_1d_cl(
         }
         else {
             // Use standard unrolled implementation
-            conv_1d_resource_cl<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+            conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data, res, weights, biases);
         }
     } else {
         conv_1d_resource_cl<data_T, res_T, CONFIG_T>(data, res, weights, biases);
