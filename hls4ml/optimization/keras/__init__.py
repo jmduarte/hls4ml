@@ -232,7 +232,7 @@ def optimize_model(
       json_file.write(optimizable_model.to_json())
 
     # In GPU FLOP Optimization, remove structures to achieve speed-up & fine-tune the smaller architecture
-    if objective.__name__ == 'GPUFLOPEstimator':
+    if objective.__name__ in ('GPUFLOPEstimator', 'VivadoFFEstimator'):
       optimizable_model = reduce_model(optimizable_model)
       optimizable_model.compile(optimizer, loss_fn)
       optimizable_model.fit(X_train, y_train, epochs = epochs, batch_size = batch_size, validation_data = (X_val, y_val))
