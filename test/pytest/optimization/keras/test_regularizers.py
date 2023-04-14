@@ -7,6 +7,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Conv2D, Flatten
 from hls4ml.optimization.config import SUPPORTED_STRUCTURES
 from hls4ml.optimization.keras.regularizers import DenseRegularizer, Conv2DRegularizer
+from hls4ml.optimization.keras.builder import remove_custom_regularizers
 
 # Constants
 pattern_offset = 4
@@ -137,3 +138,19 @@ def test_conv2d_regularizer(structure_type, conv2d):
     # Verify regularization decreased weight magnitude and variance
     assert(reg_norm < norm)
     assert(reg_var < var)
+
+def test_removal_of_custom_regularizer():
+    model = Sequential()
+    model.add(Conv2D(8, (3, 3), input_shape=(16, 16, 3), kernel_regularizer=Conv2DRegularizer(1e-3)))
+    model.add(Flatten())
+    model.add(Dense(1, kernel_regularizer=DenseRegularizer(1e-3)))
+    weights = model.get_weights()
+
+    assert(isinstance(model.layers[0].kernel_regularizer, Conv2DRegularizer))
+    assert(isinstance(model.layers[2].kernel_regularizer, DenseRegularizer))
+
+    model = remove_custom_regularizers(model)
+
+    assert(model.layers[0].kernel_regularizer is None)
+    for i in range(len(weights)):
+        assert(np.all(weights[i] == model.get_weights()[i]))
