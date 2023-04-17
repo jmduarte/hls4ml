@@ -3,7 +3,7 @@ hls4ml Optimization API
 ========================
 
 Pruning and weight sharing are effective techniques to reduce model footprint and computational requirements. The hls4ml Optimization API introduces hardware-aware pruning and weight sharing.
-By defining custom objectives, the algorithm solves a Knapsack optimization problem aimed at maximizing model performance, while keeping the target resource(s) at a minimum. Out-of-the box objectives include network sparsity, GPU FLOPs, Vivado DSPs, memory utilization etc. 
+By defining custom objectives, the algorithm solves a Knapsack optimization problem aimed at maximizing model performance, while keeping the target resource(s) at a minimum. Out-of-the box objectives include network sparsity, GPU FLOPs, Vivado DSPs, memory utilization etc.
 
 The code block below showcases three use cases of the hls4ml Optimization API - network sparsity (unstructured pruning), GPU FLOPs (structured pruning) and Vivado DSP utilization (pattern pruning). First, we start with unstructured pruning:
 
@@ -42,7 +42,7 @@ The code block below showcases three use cases of the hls4ml Optimization API - 
     metric = 'accuracy'
     optimizer = Adam()
     loss_fn = CategoricalCrossentropy(from_logits=True)
-    
+
     # Define the metric to monitor, as well as if its increasing or decreasing
     # This disctinction allows us to optimize both regression and classification models
     # In regression, e.g. minimize validation MSE & for classification e.g. maximize accuracy
@@ -50,7 +50,7 @@ The code block below showcases three use cases of the hls4ml Optimization API - 
 
     # Relative tolerance (rtol) is the the relative loss in metric the optimized model is allowed to incur
     rtol = 0.975
-    
+
     # A scheduler defines how the sparsity is incremented at each step
     # In this case, the maximum sparsity is 50% and it will be applied at a polynomially decreasing rate, for 10 steps
     # If the final sparsity is unspecified, it is set to 100%
@@ -59,12 +59,12 @@ The code block below showcases three use cases of the hls4ml Optimization API - 
 
     # Get model attributes
     model_attributes = get_attributes_from_keras_model(baseline_model)
-    
+
     # Optimize model
     # ParameterEstimator is the objective and, in this case, the objective is to minimize the total number of parameters
     optimized_model = optimize_model(
         baseline_model, model_attributes, ParameterEstimator, scheduler,
-        X_train, y_train, X_val, y_val, batch_size, epochs, optimizer, loss_fn, metric, increasing, rtol 
+        X_train, y_train, X_val, y_val, batch_size, epochs, optimizer, loss_fn, metric, increasing, rtol
     )
 
     # Evaluate optimized model
@@ -74,20 +74,20 @@ The code block below showcases three use cases of the hls4ml Optimization API - 
     print(f'Optimized Keras accuracy: {acc_optimized}')
     print(f'Optimized Keras sparsity, overall: {sparsity}')
     print(f'Opimized Keras sparsity, per-layer: {layers}')
- 
-In a similar manner, it is possible to target GPU FLOPs or Vivado DSPs. However, in that case, sparsity is not equivalent to model sparsity. 
+
+In a similar manner, it is possible to target GPU FLOPs or Vivado DSPs. However, in that case, sparsity is not equivalent to model sparsity.
 Instead, it is the sparsity of the target resource. As an example: Starting with a network utilizing 512 DSPs and a final sparsity of 50%; the optimized network will use 256 DSPs.
 
 To optimize GPU FLOPs, the code is similar to above:
 
 .. code-block:: Python
     from hls4ml.optimization.objectives.gpu_objectives import GPUFLOPEstimator
-    
+
     # Optimize model
     # Note the change from ParameterEstimator to GPUFLOPEstimator
     optimized_model = optimize_model(
         baseline_model, model_attributes, GPUFLOPEstimator, scheduler,
-        X_train, y_train, X_val, y_val, batch_size, epochs, optimizer, loss_fn, metric, increasing, rtol 
+        X_train, y_train, X_val, y_val, batch_size, epochs, optimizer, loss_fn, metric, increasing, rtol
     )
 
     # Evaluate optimized model
@@ -105,16 +105,16 @@ Finally, optimizing Vivado DSPs is possible, given a hls4ml config:
 .. code-block:: Python
     from hls4ml.utils.config import config_from_keras_model
     from hls4ml.optimization.objectives.vivado_objectives import VivadoDSPEstimator
-    
+
     # Create hls4ml config
     default_reuse_factor = 4
     default_precision = 'ac_fixed<16, 6>'
-    hls_config = config_from_keras_model(baseline_model, granularity='name', default_precision=default_precision, default_reuse_factor=default_reuse_factor)    
-    hls_config['IOType'] = 'io_parallel' 
+    hls_config = config_from_keras_model(baseline_model, granularity='name', default_precision=default_precision, default_reuse_factor=default_reuse_factor)
+    hls_config['IOType'] = 'io_parallel'
 
     # Optimize model
     # Note the change from ParameterEstimator to VivadoDSPEstimator
     optimized_model = optimize_model(
         baseline_model, model_attributes, VivadoDSPEstimator, scheduler,
-        X_train, y_train, X_val, y_val, batch_size, epochs, optimizer, loss_fn, metric, increasing, rtol 
+        X_train, y_train, X_val, y_val, batch_size, epochs, optimizer, loss_fn, metric, increasing, rtol
     )
