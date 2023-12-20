@@ -51,11 +51,12 @@ void subtract(input1_T data1[CONFIG_T::n_elem], input2_T data2[CONFIG_T::n_elem]
 }
 
 template <class input1_T, class input2_T, class res_T, typename CONFIG_T>
-void multiply(input1_T data1[CONFIG_T::n_elem], input2_T data2[CONFIG_T::n_elem], res_T res[CONFIG_T::n_elem]) {
+void multiply(input1_T data1[CONFIG_T::n_elem], input2_T data2[CONFIG_T::n_elem*2], res_T res[CONFIG_T::n_elem*2]) {
     #pragma HLS PIPELINE
 
     for (int ii = 0; ii < CONFIG_T::n_elem; ii++) {
-        res[ii] = data1[ii] * data2[ii];
+        res[ii*2] = data1[ii] * data2[ii*2];
+	res[ii*2+1] = data1[ii] * data2[ii*2+1];
     }
 }
 

@@ -343,11 +343,12 @@ class ModelGraph:
         input_layers = inputs if inputs is not None else [layer_list[0]['name']]
         output_layers = outputs if outputs is not None else [layer_list[-1]['name']]
         self.inputs = self._find_output_variable_names(layer_list, input_layers)
-        if self.inputs != input_layers:
+        if sorted(self.inputs) != sorted(input_layers):
             raise RuntimeError(
                 "Currently only support the case when input variables and input layer names match\n"
                 + f"Input layers = {input_layers}, input_vars = {self.inputs}"
             )
+        if self.inputs != input_layers: self.inputs = input_layers
         self.outputs = self._find_output_variable_names(layer_list, output_layers)
 
         self.index = 0
