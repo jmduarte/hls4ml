@@ -4,7 +4,8 @@ import sys
 import numpy as np
 
 from hls4ml.backends import FPGABackend
-from hls4ml.backends.fpga.fpga_types import APTypeConverter, HLSTypeConverter, VivadoArrayVariableConverter
+from hls4ml.backends.fpga.fpga_types import APTypeConverter, HLSTypeConverter
+from hls4ml.backends.vivado.vivado_types import VivadoArrayVariableConverter
 from hls4ml.model.attributes import ChoiceAttribute, ConfigurableAttribute, TypeAttribute
 from hls4ml.model.flow import register_flow
 from hls4ml.model.layers import (
@@ -109,6 +110,8 @@ class VivadoBackend(FPGABackend):
             'vivado:inplace_parallel_reshape',
             'vivado:inplace_stream_flatten',
             'vivado:skip_softmax',
+            'vivado:fix_softmax_table_size',
+            'infer_precision_types',
         ]
         optimization_flow = register_flow('optimize', optimization_passes, requires=[init_flow], backend=self.name)
 
@@ -175,12 +178,15 @@ class VivadoBackend(FPGABackend):
     def get_writer_flow(self):
         return self._writer_flow
 
-    def create_initial_config(self, part='xcku115-flvb2104-2-i', clock_period=5, io_type='io_parallel'):
+    def create_initial_config(
+        self, part='xcvu13p-flga2577-2-e', clock_period=5, clock_uncertainty='12.5%', io_type='io_parallel', **_
+    ):
         config = {}
 
-        config['Part'] = part if part is not None else 'xcku115-flvb2104-2-i'
-        config['ClockPeriod'] = clock_period
-        config['IOType'] = io_type
+        config['Part'] = part if part is not None else 'xcvu13p-flga2577-2-e'
+        config['ClockPeriod'] = clock_period if clock_period is not None else 5
+        config['ClockUncertainty'] = clock_uncertainty if clock_uncertainty is not None else '12.5%'
+        config['IOType'] = io_type if io_type is not None else 'io_parallel'
         config['HLSConfig'] = {}
 
         return config
@@ -376,8 +382,9 @@ class VivadoBackend(FPGABackend):
     def _set_pooling_accum_t(self, layer, pool_size):
         extra_bits = ceil_log2(pool_size)
         accum_t = layer.get_attr('accum_t')
-        accum_t.precision.fractional += extra_bits
-        accum_t.precision.integer += extra_bits
+        accum_t.precision.width += extra_bits * 2
+        if isinstance(accum_t.precision, FixedPrecisionType):
+            accum_t.precision.integer += extra_bits
 
     @layer_optimizer(Pooling1D)
     def init_pooling1d(self, layer):
@@ -474,3 +481,61 @@ class VivadoBackend(FPGABackend):
     @layer_optimizer(GarNetStack)
     def init_garnet_stack(self, layer):
         self.init_garnet(layer)
+
+    def generate_pointwise_conv1d_fn(self, layer_idx, reuse_factor=1):
+        """Generate a C++ function for a pointwise convolution layer.
+
+        Args:
+            layer_idx (int): Index of layer ('index' attribute).
+            reuse_factor (int): Number of partitions to divide the input into.
+
+        Returns:
+            str: Generated C++ function
+        """
+
+        generated_code = (
+            "template<class data_T, class res_T, typename CONFIG_T>\n"
+            "class pointwise_conv_{index} : public PointwiseConv1D<data_T, res_T, CONFIG_T> {{\n"
+            "  public:\n"
+            "    static void pointwise_conv(\n"
+            "                               data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],\n"
+            "                               res_T res[CONFIG_T::out_width * CONFIG_T::n_filt],\n"
+            "                               typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],\n"
+            "                               typename CONFIG_T::bias_t biases[CONFIG_T::n_filt]) {{\n"
+            "        data_T data_tmp[CONFIG_T::reuse_factor][CONFIG_T::in_width * CONFIG_T::n_chan / CONFIG_T::reuse_factor];\n"  # noqa: E501
+            "        #pragma HLS ARRAY_PARTITION variable=data_tmp complete dim=0\n"
+            "        res_T res_tmp[CONFIG_T::reuse_factor][CONFIG_T::out_width * CONFIG_T::n_filt / CONFIG_T::reuse_factor];\n"  # noqa: E501
+            "        #pragma HLS ARRAY_PARTITION variable=res_tmp complete dim=0\n\n"
+            "    RFInputLoop:\n"
+            "        for (int jj = 0; jj < CONFIG_T::reuse_factor; jj++) {{\n"
+            "        #pragma HLS UNROLL\n"
+            "        InnerInputLoop:\n"
+            "            for (int ii = 0; ii < CONFIG_T::in_width * CONFIG_T::n_chan / CONFIG_T::reuse_factor; ii++) {{\n"
+            "                #pragma HLS UNROLL\n"
+            "                data_tmp[jj][ii] = data[jj * CONFIG_T::in_width * CONFIG_T::n_chan / CONFIG_T::reuse_factor + ii];\n"  # noqa: E501
+            "            }}\n"
+            "        }}\n\n"
+        ).format(index=layer_idx)
+        indent = "        "
+        for i in range(reuse_factor):
+            generated_code += indent
+            generated_code += (
+                f"pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[{i}], res_tmp[{i}], weights, biases);\n"
+            )
+
+        generated_code += (
+            "\n"
+            "    RFOutputLoop:\n"
+            "        for (int jj = 0; jj < CONFIG_T::reuse_factor; jj++) {\n"
+            "        #pragma HLS UNROLL\n"
+            "        InnerOutputLoop:\n"
+            "            for (int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt / CONFIG_T::reuse_factor; ii++) {\n"
+            "                #pragma HLS UNROLL\n"
+            "                res[jj * CONFIG_T::out_width * CONFIG_T::n_filt / CONFIG_T::reuse_factor + ii] = res_tmp[jj][ii];\n"  # noqa: E501
+            "            }\n"
+            "        }\n"
+            "    }\n"
+            "};\n"
+        )
+
+        return generated_code

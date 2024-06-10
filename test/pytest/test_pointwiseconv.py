@@ -11,32 +11,35 @@ test_root_path = Path(__file__).parent
 
 padds_options = ['same', 'valid']
 chans_options = ['channels_last']
-io_type_options = ['io_parallel', 'io_stream']
 strides1d_options = [(1,), (2,)]
 strides2d_options = [(1, 1), (2, 2)]
-strategy_options = ['Latency', 'Resource']
 
 
 @pytest.mark.parametrize('chans', chans_options)
 @pytest.mark.parametrize('padds', padds_options)
 @pytest.mark.parametrize('strides', strides1d_options)
 @pytest.mark.parametrize(
-    'backend, io_type, strategy, conv_impl',
+    'backend, io_type, strategy, conv_impl, rf',
     [
-        ('Quartus', 'io_parallel', 'resource', 'LineBuffer'),
-        ('Vivado', 'io_parallel', 'resource', 'LineBuffer'),
-        ('Vitis', 'io_parallel', 'resource', 'LineBuffer'),
-        ('Vivado', 'io_parallel', 'latency', 'LineBuffer'),
-        ('Vitis', 'io_parallel', 'latency', 'LineBuffer'),
-        ('Vivado', 'io_parallel', 'latency', 'Pointwise'),
-        ('Vitis', 'io_parallel', 'latency', 'Pointwise'),
-        ('Vivado', 'io_stream', 'latency', 'LineBuffer'),
-        ('Vivado', 'io_stream', 'resource', 'LineBuffer'),
-        ('Vitis', 'io_stream', 'latency', 'LineBuffer'),
-        ('Vitis', 'io_stream', 'resource', 'LineBuffer'),
+        ('Quartus', 'io_parallel', 'resource', 'LineBuffer', 1),
+        ('Quartus', 'io_stream', 'resource', 'LineBuffer', 1),
+        ('Vivado', 'io_parallel', 'resource', 'LineBuffer', 1),
+        ('Vitis', 'io_parallel', 'resource', 'LineBuffer', 1),
+        ('Vivado', 'io_parallel', 'latency', 'LineBuffer', 1),
+        ('Vitis', 'io_parallel', 'latency', 'LineBuffer', 1),
+        ('Vivado', 'io_parallel', 'latency', 'Pointwise', 1),
+        ('Vivado', 'io_parallel', 'latency', 'Pointwise', 14),
+        ('Vitis', 'io_parallel', 'latency', 'Pointwise', 1),
+        ('Vitis', 'io_parallel', 'latency', 'Pointwise', 14),
+        ('Vivado', 'io_stream', 'latency', 'LineBuffer', 1),
+        ('Vivado', 'io_stream', 'resource', 'LineBuffer', 1),
+        ('Vitis', 'io_stream', 'latency', 'LineBuffer', 1),
+        ('Vitis', 'io_stream', 'resource', 'LineBuffer', 1),
+        ('Catapult', 'io_stream', 'latency', 'LineBuffer', 1),
+        ('Catapult', 'io_stream', 'resource', 'LineBuffer', 1),
     ],
 )
-def test_pointwiseconv1d(chans, padds, strides, backend, io_type, strategy, conv_impl):
+def test_pointwiseconv1d(chans, padds, strides, backend, io_type, strategy, conv_impl, rf):
     model = tf.keras.models.Sequential()
     input_shape = (28, 3)
     model.add(
@@ -57,14 +60,15 @@ def test_pointwiseconv1d(chans, padds, strides, backend, io_type, strategy, conv
     X_input = np.random.rand(100, *input_shape)
     keras_prediction = model.predict(X_input)
 
-    default_precision = 'ac_fixed<32,16,true>' if backend == 'Quartus' else 'ap_fixed<32,16>'
+    default_precision = 'fixed<32,16>'
     config = hls4ml.utils.config_from_keras_model(model, default_precision=default_precision, granularity='name')
     config['Model']['Strategy'] = strategy
     config['LayerName']['pointwise1d']['ConvImplementation'] = conv_impl
+    config['LayerName']['pointwise1d']['ReuseFactor'] = rf
 
     output_dir = str(
         test_root_path
-        / f'hls4mlprj_pointwise1d_{chans}_strides_{strides[0]}_{padds}_padding_{backend}_{io_type}_{strategy}_{conv_impl}'
+        / f'hls4mlprj_pointwise1d_{chans}_{strides[0]}_{padds}_{backend}_{io_type}_{strategy}_{conv_impl}_rf{rf}'
     )
     hls_model = hls4ml.converters.convert_from_keras_model(
         model, hls_config=config, output_dir=output_dir, io_type=io_type, backend=backend
@@ -72,7 +76,9 @@ def test_pointwiseconv1d(chans, padds, strides, backend, io_type, strategy, conv
     hls_model.compile()
     hls_prediction = hls_model.predict(X_input).reshape(keras_prediction.shape)
 
-    assert 'Pointwise' in list(hls_model.graph.values())[1].class_name
+    if not (backend == 'Quartus' and io_type == 'io_stream'):
+        # Quartus io_stream does not currently have a special pointwise implementation
+        assert 'Pointwise' in list(hls_model.graph.values())[1].class_name
     np.testing.assert_allclose(hls_prediction, keras_prediction, rtol=0, atol=0.001)
 
 
@@ -83,10 +89,13 @@ def test_pointwiseconv1d(chans, padds, strides, backend, io_type, strategy, conv
     'backend, io_type, strategy',
     [
         ('Quartus', 'io_parallel', 'resource'),
+        ('Quartus', 'io_stream', 'resource'),
         ('Vivado', 'io_parallel', 'resource'),
         ('Vivado', 'io_parallel', 'latency'),
         ('Vivado', 'io_stream', 'latency'),
         ('Vivado', 'io_stream', 'resource'),
+        ('Catapult', 'io_stream', 'latency'),
+        ('Catapult', 'io_stream', 'resource'),
     ],
 )
 def test_pointwiseconv2d(chans, padds, strides, backend, io_type, strategy):
@@ -110,7 +119,7 @@ def test_pointwiseconv2d(chans, padds, strides, backend, io_type, strategy):
     X_input = np.random.rand(100, *input_shape)
     keras_prediction = model.predict(X_input)
 
-    default_precision = 'ac_fixed<32, 9, true>' if backend == 'Quartus' else 'ap_fixed<32, 9>'
+    default_precision = 'fixed<32, 9>'
 
     config = hls4ml.utils.config_from_keras_model(model, default_precision=default_precision)
     config['Model']['Strategy'] = strategy
@@ -125,7 +134,9 @@ def test_pointwiseconv2d(chans, padds, strides, backend, io_type, strategy):
     hls_model.compile()
     hls_prediction = hls_model.predict(X_input).reshape(keras_prediction.shape)
 
-    assert 'Pointwise' in list(hls_model.graph.values())[1].class_name
+    if not (backend == 'Quartus' and io_type == 'io_stream'):
+        # Quartus io_stream does not currently have a special pointwise implementation
+        assert 'Pointwise' in list(hls_model.graph.values())[1].class_name
     np.testing.assert_allclose(hls_prediction, keras_prediction, rtol=0, atol=0.001)
 
 

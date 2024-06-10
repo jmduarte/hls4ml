@@ -41,6 +41,8 @@ conv1d_config_template = """struct config{index} : nnet::conv1d_config {{
     static const unsigned out_width = {out_width};
     static const unsigned reuse_factor = {reuse};
     static const unsigned n_zeros = {nzeros};
+    static const unsigned multiplier_limit =
+        DIV_ROUNDUP(kernel_size * n_chan * n_filt, reuse_factor) - n_zeros / reuse_factor;
     static const bool store_weights_in_bram = false;
     static const unsigned strategy = nnet::{strategy};
     static const nnet::conv_implementation implementation = nnet::conv_implementation::{implementation};
@@ -88,6 +90,11 @@ class Conv1DConfigTemplate(LayerConfigTemplate):
             params['fill_fn'] = f'fill_buffer_{node.index}'
         else:
             params['fill_fn'] = 'FillConv1DBuffer'
+
+        if node.get_attr('filt_width') == 1 and node.model.config.get_config_value('IOType') == 'io_parallel':
+            params['pointwise_fn'] = f'pointwise_conv_{node.index}'
+        else:
+            params['pointwise_fn'] = 'PointwiseConv1D'
 
         conv_config = self.template.format(**params)
 
@@ -283,6 +290,7 @@ class SeparableConv1DConfigTemplate(LayerConfigTemplate):
         params['nzeros'] = node.get_weights('depthwise').nzeros
         params['index'] = str(node.index) + '_depthwise'
         params['weight_t'] = node.get_weights('depthwise').type
+        params['bias_t'] = node.get_weights('zero_bias').type
         params['fill_fn'] = 'FillConv1DBuffer'
 
         if node.get_attr('unscaled'):
